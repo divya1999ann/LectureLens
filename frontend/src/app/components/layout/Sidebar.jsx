@@ -30,15 +30,14 @@ const Sidebar = ({ role, collapsed, setCollapsed }) => {
     admin: [
       { icon: Home, label: 'Dashboard', path: '/admin/dashboard' },
       { icon: Users, label: 'Teachers', path: '/admin/teachers' },
-      { icon: Settings, label: 'System Settings', path: '/admin/settings' },
-      { icon: User, label: 'Profile', path: '/profile' }
+      { icon: GraduationCap, label: 'Subjects', path: '/admin/subjects' },
+      { icon: User, label: 'Students', path: '/admin/students' },
     ],
     teacher: [
       { icon: Home, label: 'Dashboard', path: '/teacher/dashboard' },
-      { icon: Video, label: 'My Lectures', path: '/teacher/lectures' },
       { icon: Mic, label: 'Record New', path: '/teacher/record' },
-      { icon: Upload, label: 'Upload Lecture', path: '/teacher/upload' },
-      { icon: User, label: 'Profile', path: '/profile' }
+      { icon: Upload, label: 'Upload Lectures', path: '/teacher/upload' },
+      { icon: User, label: 'Profile', path: '/teacher/profile' }
     ],
     student: [
       { icon: Home, label: 'Dashboard', path: '/dashboard' },

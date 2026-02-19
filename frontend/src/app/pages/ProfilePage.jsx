@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { User, Mail, Lock, Camera, AlertTriangle, Bell } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { User, Mail, Lock, Camera, Bell, Moon, Sun, Shield, BookOpen, GraduationCap } from 'lucide-react';
+import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Switch } from '../components/ui/switch';
-import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import useAuthStore from '../store/authStore';
 import useThemeStore from '../store/themeStore';
@@ -13,7 +12,7 @@ import useThemeStore from '../store/themeStore';
 const ProfilePage = () => {
   const { user } = useAuthStore();
   const { darkMode, toggleDarkMode } = useThemeStore();
-  
+
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -23,11 +22,12 @@ const ProfilePage = () => {
   });
 
   const [emailNotifications, setEmailNotifications] = useState(true);
-  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [saved, setSaved] = useState(false);
 
   const handleSaveProfile = (e) => {
     e.preventDefault();
-    alert('Profile updated successfully!');
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const handleChangePassword = (e) => {
@@ -44,236 +44,154 @@ const ProfilePage = () => {
     setFormData({ ...formData, currentPassword: '', newPassword: '', confirmPassword: '' });
   };
 
-  const handleDeleteAccount = () => {
-    if (confirm('Are you absolutely sure? This action cannot be undone and will permanently delete your account and all associated data.')) {
-      alert('Account deletion would be processed here');
-    }
+  const roleConfig = {
+    admin: { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: Shield, label: 'Administrator' },
+    teacher: { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: BookOpen, label: 'Teacher' },
+    student: { color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', icon: GraduationCap, label: 'Student' },
   };
 
-  const calculatePasswordStrength = (password) => {
-    if (password.length === 0) return 0;
-    if (password.length < 6) return 1;
-    if (password.length < 10) return 2;
-    return 3;
-  };
-
-  const handleNewPasswordChange = (value) => {
-    setFormData({ ...formData, newPassword: value });
-    setPasswordStrength(calculatePasswordStrength(value));
-  };
+  const role = roleConfig[user?.role] || roleConfig.student;
+  const RoleIcon = role.icon;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Profile Settings</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your account settings and preferences</p>
+    <div className="max-w-2xl mx-auto space-y-6 pb-10 animate-in fade-in duration-500">
+      {/* Profile Header */}
+      <div className="text-center space-y-4">
+        <div className="relative inline-block">
+          <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-blue-500/20">
+            {user?.name?.charAt(0) || 'U'}
+          </div>
+          <button className="absolute -bottom-2 -right-2 w-8 h-8 bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:border-blue-200 transition-colors shadow-sm">
+            <Camera className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">{user?.name || 'User'}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{user?.email}</p>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <Badge className={`${role.color} border-none gap-1 text-xs font-semibold px-2.5 py-1`}>
+              <RoleIcon className="w-3 h-3" />
+              {role.label}
+            </Badge>
+          </div>
+        </div>
       </div>
 
-      {/* Profile Picture Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Camera className="w-5 h-5" />
-            Profile Picture
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-6">
-            <Avatar className="w-24 h-24">
-              <AvatarFallback className="bg-blue-500 text-white text-3xl">
-                {user?.name?.charAt(0) || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="space-y-2">
-              <Button variant="outline">
-                <Camera className="w-4 h-4 mr-2" />
-                Upload Photo
-              </Button>
-              <Button variant="ghost" className="ml-2">Remove</Button>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Supported formats: JPG, PNG (Max 2MB)
-              </p>
-            </div>
+      {/* Personal Info */}
+      <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 mb-5">
+            <User className="w-4 h-4 text-gray-500" />
+            <h2 className="font-semibold text-sm text-gray-900 dark:text-white">Personal Information</h2>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Personal Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="w-5 h-5" />
-            Personal Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
           <form onSubmit={handleSaveProfile} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name" className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Full Name</Label>
               <Input
                 id="name"
+                className="h-11"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email" className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Email Address</Label>
               <div className="relative">
                 <Input
                   id="email"
                   type="email"
+                  className="h-11 pr-10 bg-gray-50 dark:bg-gray-800/50"
                   value={formData.email}
                   disabled
-                  className="pr-10"
                 />
-                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Email cannot be changed
-              </p>
+              <p className="text-[10px] text-gray-400">Email cannot be changed</p>
             </div>
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <div>
-                <Badge variant="secondary" className="text-sm">
-                  {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
-                </Badge>
-              </div>
-            </div>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" size="sm" className={`transition-all duration-300 ${saved ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}>
+              {saved ? '✓ Saved' : 'Save Changes'}
+            </Button>
           </form>
         </CardContent>
       </Card>
 
       {/* Preferences */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="w-5 h-5" />
-            Preferences
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label htmlFor="email-notifications" className="text-base">Email Notifications</Label>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Receive email updates about new lectures and announcements
-              </p>
-            </div>
-            <Switch
-              id="email-notifications"
-              checked={emailNotifications}
-              onCheckedChange={setEmailNotifications}
-            />
+      <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Bell className="w-4 h-4 text-gray-500" />
+            <h2 className="font-semibold text-sm text-gray-900 dark:text-white">Preferences</h2>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label htmlFor="dark-mode" className="text-base">Dark Mode</Label>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Use dark theme across the application
-              </p>
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">Email Notifications</p>
+                <p className="text-xs text-gray-400 mt-0.5">Receive updates about new lectures</p>
+              </div>
+              <Switch checked={emailNotifications} onCheckedChange={setEmailNotifications} />
             </div>
-            <Switch
-              id="dark-mode"
-              checked={darkMode}
-              onCheckedChange={toggleDarkMode}
-            />
+            <div className="h-px bg-gray-100 dark:bg-gray-800" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {darkMode ? <Moon className="w-4 h-4 text-gray-400" /> : <Sun className="w-4 h-4 text-amber-400" />}
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Dark Mode</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Toggle dark theme</p>
+                </div>
+              </div>
+              <Switch checked={darkMode} onCheckedChange={toggleDarkMode} />
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Change Password */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lock className="w-5 h-5" />
-            Change Password
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Lock className="w-4 h-4 text-gray-500" />
+            <h2 className="font-semibold text-sm text-gray-900 dark:text-white">Change Password</h2>
+          </div>
           <form onSubmit={handleChangePassword} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="current-password">Current Password</Label>
+              <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Current Password</Label>
               <Input
-                id="current-password"
                 type="password"
+                className="h-11"
                 value={formData.currentPassword}
                 onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-password">New Password</Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={formData.newPassword}
-                onChange={(e) => handleNewPasswordChange(e.target.value)}
-              />
-              {formData.newPassword && (
-                <div className="space-y-1">
-                  <div className="flex gap-1">
-                    {[1, 2, 3].map((level) => (
-                      <div
-                        key={level}
-                        className={`h-1 flex-1 rounded ${
-                          level <= passwordStrength
-                            ? passwordStrength === 1
-                              ? 'bg-red-500'
-                              : passwordStrength === 2
-                              ? 'bg-yellow-500'
-                              : 'bg-green-500'
-                            : 'bg-gray-200 dark:bg-gray-700'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Password strength: {passwordStrength === 1 ? 'Weak' : passwordStrength === 2 ? 'Medium' : 'Strong'}
-                  </p>
-                </div>
-              )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">New Password</Label>
+                <Input
+                  type="password"
+                  className="h-11"
+                  value={formData.newPassword}
+                  onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Confirm Password</Label>
+                <Input
+                  type="password"
+                  className="h-11"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm New Password</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              />
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Password requirements: Must be at least 8 characters
-            </p>
-            <Button 
-              type="submit" 
+            <p className="text-[10px] text-gray-400">Minimum 8 characters required</p>
+            <Button
+              type="submit"
+              variant="outline"
+              size="sm"
               disabled={!formData.currentPassword || !formData.newPassword || !formData.confirmPassword}
             >
               Update Password
             </Button>
           </form>
-        </CardContent>
-      </Card>
-
-      {/* Danger Zone */}
-      <Card className="border-red-200 dark:border-red-900">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
-            <AlertTriangle className="w-5 h-5" />
-            Danger Zone
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <h3 className="font-semibold text-red-600 dark:text-red-400 mb-2">Delete Account</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Permanently delete your account and all associated data. This action cannot be undone.
-            </p>
-            <Button variant="destructive" onClick={handleDeleteAccount}>
-              Delete Account
-            </Button>
-          </div>
         </CardContent>
       </Card>
     </div>

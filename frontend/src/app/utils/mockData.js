@@ -31,6 +31,48 @@ export const mockTeachers = [
   { id: 6, name: 'Prof. Michael Brown', email: 'michael.brown@university.edu', subjects: 2, students: 54, joinedDate: '2023-07-20', status: 'active', department: 'Computer Science' }
 ];
 
+// Mock students data
+export const mockStudents = [
+  { id: 101, name: 'John Student', email: 'john@student.edu', department: 'Computer Science', year: '3rd Year' },
+  { id: 102, name: 'Alice Wang', email: 'alice.wang@student.edu', department: 'Computer Science', year: '3rd Year' },
+  { id: 103, name: 'Bob Martinez', email: 'bob.m@student.edu', department: 'Data Science', year: '2nd Year' },
+  { id: 104, name: 'Priya Patel', email: 'priya.p@student.edu', department: 'Computer Science', year: '4th Year' },
+  { id: 105, name: 'David Kim', email: 'david.kim@student.edu', department: 'Computer Science', year: '3rd Year' },
+  { id: 106, name: 'Sara Ahmed', email: 'sara.a@student.edu', department: 'Data Science', year: '2nd Year' },
+  { id: 107, name: 'James Wilson', email: 'james.w@student.edu', department: 'Computer Science', year: '4th Year' },
+  { id: 108, name: 'Mei Lin', email: 'mei.lin@student.edu', department: 'Computer Science', year: '3rd Year' },
+  { id: 109, name: 'Carlos Rivera', email: 'carlos.r@student.edu', department: 'Data Science', year: '3rd Year' },
+  { id: 110, name: 'Emma Thompson', email: 'emma.t@student.edu', department: 'Computer Science', year: '2nd Year' },
+];
+
+// Subject enrollments (which students are in which subjects)
+export const mockEnrollments = [
+  // CS601 - Machine Learning Systems
+  { subjectId: 1, studentId: 101 },
+  { subjectId: 1, studentId: 102 },
+  { subjectId: 1, studentId: 104 },
+  { subjectId: 1, studentId: 105 },
+  { subjectId: 1, studentId: 107 },
+  // CS602 - Deep Learning
+  { subjectId: 2, studentId: 101 },
+  { subjectId: 2, studentId: 103 },
+  { subjectId: 2, studentId: 108 },
+  { subjectId: 2, studentId: 110 },
+  // CS603 - NLP
+  { subjectId: 3, studentId: 103 },
+  { subjectId: 3, studentId: 106 },
+  { subjectId: 3, studentId: 109 },
+  // CS604 - Computer Vision
+  { subjectId: 4, studentId: 102 },
+  { subjectId: 4, studentId: 105 },
+  { subjectId: 4, studentId: 107 },
+  { subjectId: 4, studentId: 108 },
+  // CS605 - Reinforcement Learning
+  { subjectId: 5, studentId: 104 },
+  { subjectId: 5, studentId: 109 },
+  { subjectId: 5, studentId: 110 },
+];
+
 // Mock subjects data
 export const mockSubjects = [
   {

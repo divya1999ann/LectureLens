@@ -12,6 +12,9 @@ import RegisterPage from './pages/auth/RegisterPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminSubjects from './pages/admin/AdminSubjects';
+import AdminTeachers from './pages/admin/AdminTeachers';
+import AdminStudents from './pages/admin/AdminStudents';
 
 // Teacher Pages
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
@@ -19,6 +22,8 @@ import UploadLecture from './pages/teacher/UploadLecture';
 import RecordingPage from './pages/teacher/RecordingPage';
 import LectureList from './pages/teacher/LectureList';
 import TeacherLectureDetail from './pages/teacher/TeacherLectureDetail';
+import TeacherSubjectDetail from './pages/teacher/TeacherSubjectDetail';
+import TeacherProfile from './pages/teacher/TeacherProfile';
 
 // Student Pages
 import StudentDashboard from './pages/student/StudentDashboard';
@@ -54,20 +59,37 @@ export default function App() {
           element={
             <ProtectedRoute role="admin">
               <DashboardLayout role="admin">
-                <AdminDashboard />
+                <AdminTeachers />
               </DashboardLayout>
             </ProtectedRoute>
           }
         />
         <Route
-          path="/admin/settings"
+          path="/admin/students"
           element={
             <ProtectedRoute role="admin">
               <DashboardLayout role="admin">
-                <div className="text-center py-12">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">System Settings</h2>
-                  <p className="text-gray-600 dark:text-gray-400 mt-2">Configure system-wide settings</p>
-                </div>
+                <AdminStudents />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/subjects"
+          element={
+            <ProtectedRoute role="admin">
+              <DashboardLayout role="admin">
+                <AdminSubjects />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/subjects/:id"
+          element={
+            <ProtectedRoute role="admin">
+              <DashboardLayout role="admin">
+                <AdminSubjects />
               </DashboardLayout>
             </ProtectedRoute>
           }
@@ -120,6 +142,26 @@ export default function App() {
             <ProtectedRoute role="teacher">
               <DashboardLayout role="teacher">
                 <TeacherLectureDetail />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/subjects/:id"
+          element={
+            <ProtectedRoute role="teacher">
+              <DashboardLayout role="teacher">
+                <TeacherSubjectDetail />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/profile"
+          element={
+            <ProtectedRoute role="teacher">
+              <DashboardLayout role="teacher">
+                <TeacherProfile />
               </DashboardLayout>
             </ProtectedRoute>
           }
