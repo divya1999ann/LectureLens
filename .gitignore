@@ -11,6 +11,11 @@
 *.sln.docstates
 *.env
 
+# Local env and secrets (do not commit)
+.env
+.env.*
+venv
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
