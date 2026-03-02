@@ -9,12 +9,12 @@ const ProtectedRoute = ({ children, role }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // If a specific role is required, check it
-  if (role && user.role !== role) {
-    // Redirect to appropriate dashboard based on user's actual role
-    if (user.role === 'admin') {
+  // 'any' role means any authenticated user can access
+  if (role && role !== 'any' && user?.role !== role) {
+    // Redirect to the appropriate dashboard based on the user's actual role
+    if (user?.role === 'admin') {
       return <Navigate to="/admin/dashboard" replace />;
-    } else if (user.role === 'teacher') {
+    } else if (user?.role === 'teacher') {
       return <Navigate to="/teacher/dashboard" replace />;
     } else {
       return <Navigate to="/dashboard" replace />;

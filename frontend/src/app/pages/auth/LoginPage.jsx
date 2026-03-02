@@ -6,7 +6,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Checkbox } from '../../components/ui/checkbox';
 import useAuthStore from '../../store/authStore';
-import { mockUsers } from '../../utils/mockData';
+import { authAPI, getErrorMessage } from '../../services/api';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -14,29 +14,34 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    const user = mockUsers.find(u => u.email === email && u.password === password);
+    try {
+      const { data } = await authAPI.login(email, password);
 
-    if (user) {
-      const { password, ...userWithoutPassword } = user;
-      login(userWithoutPassword, 'mock-jwt-token');
+      // data = { access, refresh, user: { id, email, role, is_active, created_at } }
+      login(data.user, data.access, data.refresh);
 
-      // Redirect based on role
-      if (user.role === 'admin') {
+      // Redirect based on normalized role (authStore lowercases it)
+      const role = data.user.role?.toLowerCase();
+      if (role === 'admin') {
         navigate('/admin/dashboard');
-      } else if (user.role === 'teacher') {
+      } else if (role === 'teacher') {
         navigate('/teacher/dashboard');
       } else {
         navigate('/dashboard');
       }
-    } else {
-      setError('Invalid email or password');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -50,7 +55,7 @@ const LoginPage = () => {
               <GraduationCap className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              LectureAI
+              LectureLens
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
               Sign in to your account
@@ -74,6 +79,7 @@ const LoginPage = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
 
@@ -87,6 +93,7 @@ const LoginPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={loading}
                 />
                 <button
                   type="button"
@@ -117,8 +124,15 @@ const LoginPage = () => {
               </Link>
             </div>
 
-            <Button type="submit" className="w-full">
-              Login
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Signing in...
+                </span>
+              ) : (
+                'Login'
+              )}
             </Button>
           </form>
 
@@ -131,27 +145,6 @@ const LoginPage = () => {
             >
               Register
             </Link>
-          </div>
-
-          {/* Demo Credentials */}
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center mb-3">
-              Demo Credentials
-            </p>
-            <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
-              <div className="flex justify-between">
-                <span>Admin:</span>
-                <span className="font-mono">admin@lectureai.com / admin123</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Teacher:</span>
-                <span className="font-mono">sarah@lectureai.com / teacher123</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Student:</span>
-                <span className="font-mono">student@lectureai.com / student123</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>

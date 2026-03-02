@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { User, Mail, Lock, Camera, Bell, Moon, Sun, Shield, BookOpen, GraduationCap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Lock, Camera, Bell, Moon, Sun, Shield, BookOpen, GraduationCap, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -8,26 +8,57 @@ import { Switch } from '../components/ui/switch';
 import { Badge } from '../components/ui/badge';
 import useAuthStore from '../store/authStore';
 import useThemeStore from '../store/themeStore';
+import { usersAPI, getErrorMessage } from '../services/api';
 
 const ProfilePage = () => {
-  const { user } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
   const { darkMode, toggleDarkMode } = useThemeStore();
 
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
+    full_name: user?.full_name || '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
 
   const [emailNotifications, setEmailNotifications] = useState(true);
-  const [saved, setSaved] = useState(false);
+  const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved | error
+  const [saveError, setSaveError] = useState('');
+  const [profileLoading, setProfileLoading] = useState(true);
 
-  const handleSaveProfile = (e) => {
+  // Fetch full profile on mount (includes full_name, bio, avatar_url)
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const { data } = await usersAPI.getMe();
+        setFormData(prev => ({
+          ...prev,
+          full_name: data.full_name || '',
+        }));
+        // Sync store with latest profile
+        updateUser({ full_name: data.full_name, bio: data.bio, avatar_url: data.avatar_url });
+      } catch (err) {
+        console.error('Failed to load profile:', err);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaveStatus('saving');
+    setSaveError('');
+    try {
+      const { data } = await usersAPI.updateMe({ full_name: formData.full_name });
+      updateUser({ full_name: data.full_name });
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2500);
+    } catch (err) {
+      setSaveError(getErrorMessage(err));
+      setSaveStatus('error');
+    }
   };
 
   const handleChangePassword = (e) => {
@@ -40,7 +71,8 @@ const ProfilePage = () => {
       alert('Password must be at least 8 characters!');
       return;
     }
-    alert('Password changed successfully!');
+    // Note: backend does not yet expose a change-password endpoint in this branch
+    alert('Password change is not available via API in this phase.');
     setFormData({ ...formData, currentPassword: '', newPassword: '', confirmPassword: '' });
   };
 
@@ -52,6 +84,7 @@ const ProfilePage = () => {
 
   const role = roleConfig[user?.role] || roleConfig.student;
   const RoleIcon = role.icon;
+  const displayName = user?.full_name || formData.full_name || user?.email || 'User';
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-10 animate-in fade-in duration-500">
@@ -59,14 +92,14 @@ const ProfilePage = () => {
       <div className="text-center space-y-4">
         <div className="relative inline-block">
           <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-blue-500/20">
-            {user?.name?.charAt(0) || 'U'}
+            {displayName.charAt(0).toUpperCase()}
           </div>
           <button className="absolute -bottom-2 -right-2 w-8 h-8 bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:border-blue-200 transition-colors shadow-sm">
             <Camera className="w-3.5 h-3.5" />
           </button>
         </div>
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">{user?.name || 'User'}</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">{displayName}</h1>
           <p className="text-sm text-gray-500 mt-0.5">{user?.email}</p>
           <div className="flex items-center justify-center gap-2 mt-2">
             <Badge className={`${role.color} border-none gap-1 text-xs font-semibold px-2.5 py-1`}>
@@ -84,14 +117,23 @@ const ProfilePage = () => {
             <User className="w-4 h-4 text-gray-500" />
             <h2 className="font-semibold text-sm text-gray-900 dark:text-white">Personal Information</h2>
           </div>
+
+          {saveError && (
+            <div className="flex items-center gap-2 mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              {saveError}
+            </div>
+          )}
+
           <form onSubmit={handleSaveProfile} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name" className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Full Name</Label>
               <Input
                 id="name"
                 className="h-11"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                value={formData.full_name}
+                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                disabled={profileLoading}
               />
             </div>
             <div className="space-y-2">
@@ -101,15 +143,25 @@ const ProfilePage = () => {
                   id="email"
                   type="email"
                   className="h-11 pr-10 bg-gray-50 dark:bg-gray-800/50"
-                  value={formData.email}
+                  value={user?.email || ''}
                   disabled
                 />
                 <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
               </div>
               <p className="text-[10px] text-gray-400">Email cannot be changed</p>
             </div>
-            <Button type="submit" size="sm" className={`transition-all duration-300 ${saved ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}>
-              {saved ? '✓ Saved' : 'Save Changes'}
+            <Button
+              type="submit"
+              size="sm"
+              disabled={saveStatus === 'saving' || profileLoading}
+              className={`transition-all duration-300 ${saveStatus === 'saved' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+            >
+              {saveStatus === 'saving' ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Saving...
+                </span>
+              ) : saveStatus === 'saved' ? '✓ Saved' : 'Save Changes'}
             </Button>
           </form>
         </CardContent>

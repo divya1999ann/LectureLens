@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import {
   Home, Users, Settings, User, Book, Video, Upload, Mic,
@@ -16,15 +16,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../ui/dialog';
-import { mockSubjects } from '../../utils/mockData';
+import { authAPI, coursesAPI } from '../../services/api';
 
 const Sidebar = ({ role, collapsed, setCollapsed }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, logout, refreshToken } = useAuthStore();
   const { darkMode, toggleDarkMode } = useThemeStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [askAIOpen, setAskAIOpen] = useState(false);
+  const [aiCourses, setAiCourses] = useState([]);
 
   const menuItems = {
     admin: [
@@ -48,10 +49,24 @@ const Sidebar = ({ role, collapsed, setCollapsed }) => {
 
   const items = menuItems[role] || menuItems.student;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      if (refreshToken) await authAPI.logout(refreshToken);
+    } catch (e) {
+      // Ignore logout errors — clean up locally regardless
+    }
     logout();
     navigate('/login');
   };
+
+  // Fetch courses for the Ask AI dialog when it opens
+  useEffect(() => {
+    if (askAIOpen) {
+      coursesAPI.list().then(({ data }) => {
+        setAiCourses(data.results ?? data);
+      }).catch(() => setAiCourses([]));
+    }
+  }, [askAIOpen]);
 
   const SidebarContent = () => (
     <>
@@ -150,12 +165,12 @@ const Sidebar = ({ role, collapsed, setCollapsed }) => {
             <div className="flex items-center space-x-3 mb-3">
               <Avatar>
                 <AvatarFallback className="bg-blue-500 text-white">
-                  {user?.name?.charAt(0) || 'U'}
+                  {(user?.full_name || user?.email || 'U').charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                  {user?.name}
+                  {user?.full_name || user?.email}
                 </p>
                 <Badge variant="secondary" className="text-xs">
                   {role?.charAt(0).toUpperCase() + role?.slice(1)}
@@ -248,7 +263,9 @@ const Sidebar = ({ role, collapsed, setCollapsed }) => {
             <DialogTitle>Select a Subject</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-4">
-            {mockSubjects.map((subject) => (
+            {aiCourses.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-4">No subjects available.</p>
+            ) : aiCourses.map((subject) => (
               <button
                 key={subject.id}
                 onClick={() => {
@@ -262,10 +279,10 @@ const Sidebar = ({ role, collapsed, setCollapsed }) => {
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    {subject.code}
+                    {subject.title}
                   </h4>
                   <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                    {subject.name}
+                    {subject.description || subject.teacher_email || ''}
                   </p>
                 </div>
               </button>
