@@ -1,14 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { Plus, Search, Edit, Trash2, Users } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { mockSubjects } from '../../utils/mockData';
+import { coursesAPI, getErrorMessage } from '../../services/api';
+import useAuthStore from '../../store/authStore';
 
 const SubjectList = () => {
-    // Mock current teacher ID = 2
-    const subjects = mockSubjects.filter(s => s.instructorId === 2);
+    const { user } = useAuthStore();
+    const [subjects, setSubjects] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchSubjects = async () => {
+            try {
+                setLoading(true);
+                const { data } = await coursesAPI.list(user?.id);
+                setSubjects(data.results ?? data);
+            } catch (err) {
+                setError(getErrorMessage(err));
+            } finally {
+                setLoading(false);
+            }
+        };
+        if (user?.id) {
+            fetchSubjects();
+        }
+    }, [user?.id]);
 
     return (
         <div className="space-y-6">
@@ -43,39 +63,38 @@ const SubjectList = () => {
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700">
-                                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Code</th>
                                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Subject Name</th>
-                                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Lectures</th>
-                                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Students</th>
+                                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Created</th>
                                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {subjects.map((subject) => (
-                                    <tr key={subject.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{subject.code}</td>
-                                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{subject.name}</td>
-                                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{subject.lectureCount}</td>
-                                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
-                                            <div className="flex items-center gap-1">
-                                                <Users className="w-3 h-3" />
-                                                {subject.studentCount}
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-4 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Link to={`/teacher/subjects/${subject.id}/edit`}>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-600">
-                                                        <Edit className="w-4 h-4" />
+                                {loading ? (
+                                    <tr><td colSpan="3" className="py-6 text-center text-gray-400">Loading...</td></tr>
+                                ) : error ? (
+                                    <tr><td colSpan="3" className="py-6 text-center text-red-500">{error}</td></tr>
+                                ) : subjects.length === 0 ? (
+                                    <tr><td colSpan="3" className="py-6 text-center text-gray-400">No subjects yet. Create one to get started!</td></tr>
+                                ) : (
+                                    subjects.map((subject) => (
+                                        <tr key={subject.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                            <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{subject.title}</td>
+                                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{new Date(subject.created_at).toLocaleDateString()}</td>
+                                            <td className="py-3 px-4 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Link to={`/teacher/subjects/${subject.id}`}>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-600">
+                                                            <Edit className="w-4 h-4" />
+                                                        </Button>
+                                                    </Link>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-red-600">
+                                                        <Trash2 className="w-4 h-4" />
                                                     </Button>
-                                                </Link>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-red-600">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>

@@ -7,8 +7,6 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { coursesAPI, getErrorMessage } from '../../services/api';
-// Still using mockData for teachers/students — no admin user-management API in this phase
-import { mockTeachers, mockStudents } from '../../utils/mockData';
 
 const StatCard = ({ title, value, subtitle, icon: Icon, color, onClick, loading }) => {
   const colorMap = {
@@ -90,7 +88,7 @@ const AdminDashboard = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Teachers"
-          value={mockTeachers.length}
+          value="0"
           subtitle="Active faculty"
           icon={GraduationCap}
           color="blue"
@@ -99,7 +97,7 @@ const AdminDashboard = () => {
         />
         <StatCard
           title="Students"
-          value={mockStudents.length}
+          value="0"
           subtitle="Enrolled"
           icon={GraduationCap}
           color="emerald"
@@ -140,22 +138,9 @@ const AdminDashboard = () => {
             </Button>
           </div>
           <CardContent className="p-0">
-            {mockTeachers.slice(0, 4).map(teacher => (
-              <div
-                key={teacher.id}
-                className="flex items-center gap-3 px-5 py-3 border-b border-gray-50 dark:border-gray-800/50 last:border-b-0 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer"
-                onClick={() => navigate('/admin/teachers')}
-              >
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
-                  {teacher.name.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{teacher.name}</p>
-                  <p className="text-xs text-gray-400 truncate">{teacher.department}</p>
-                </div>
-                <Badge variant="secondary" className="text-[10px] shrink-0">{teacher.subjects} subjects</Badge>
-              </div>
-            ))}
+            <div className="px-5 py-6 text-center text-sm text-gray-400">
+              User management API coming soon
+            </div>
           </CardContent>
         </Card>
 

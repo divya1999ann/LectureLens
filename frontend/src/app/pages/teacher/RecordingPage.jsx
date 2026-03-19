@@ -7,23 +7,41 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { mockSubjects } from '../../utils/mockData';
+import { coursesAPI, getErrorMessage } from '../../services/api';
+import useAuthStore from '../../store/authStore';
 
 const RecordingPage = () => {
     const navigate = useNavigate();
+    const { user } = useAuthStore();
     const [status, setStatus] = useState('idle'); // idle, recording, paused, stopped
     const [duration, setDuration] = useState(0);
     const [downloaded, setDownloaded] = useState(false);
     const [permissionError, setPermissionError] = useState(null);
     const [audioURL, setAudioURL] = useState(null);
     const [audioBlob, setAudioBlob] = useState(null);
+    const [mySubjects, setMySubjects] = useState([]);
+    const [coursesLoading, setCoursesLoading] = useState(true);
     const [formData, setFormData] = useState({
         subjectId: '',
         lectureNumber: '',
         title: ''
     });
 
-    const mySubjects = mockSubjects.filter(s => s.instructorId === 2);
+    // Fetch teacher's courses
+    useEffect(() => {
+        const fetchCourses = async () => {
+            try {
+                setCoursesLoading(true);
+                const { data } = await coursesAPI.list(user?.id);
+                setMySubjects(data.results ?? data);
+            } catch (err) {
+                console.error('Failed to load courses:', getErrorMessage(err));
+            } finally {
+                setCoursesLoading(false);
+            }
+        };
+        fetchCourses();
+    }, [user?.id]);
     const timerRef = useRef(null);
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
@@ -231,13 +249,14 @@ const RecordingPage = () => {
                             <Select
                                 value={formData.subjectId}
                                 onValueChange={(val) => setFormData({ ...formData, subjectId: val })}
+                                disabled={coursesLoading}
                             >
                                 <SelectTrigger className="h-11">
-                                    <SelectValue placeholder="Choose a subject..." />
+                                    <SelectValue placeholder={coursesLoading ? 'Loading subjects...' : 'Choose a subject...'} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {mySubjects.map(s => (
-                                        <SelectItem key={s.id} value={s.id.toString()}>{s.code} - {s.name}</SelectItem>
+                                        <SelectItem key={s.id} value={s.id.toString()}>{s.title}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>

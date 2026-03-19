@@ -1,9 +1,65 @@
+import threading
+import requests as req_lib
+import logging
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
 from apps.lectures.models import Lecture, LectureMaterial
 from .serializers import TranscriptionStatusSerializer, TranscriptionSerializer
+
+logger = logging.getLogger(__name__)
+AI_SERVICE_TRANSCRIBE_URL = "http://127.0.0.1:8001/ai/transcribe"
+
+
+def _run_transcription(transcript_id: str, lecture_id: str, audio_path: str):
+    """
+    Spawned in a background thread.
+    Calls AI service and writes result back to the LectureMaterial DB row.
+    """
+    try:
+        import os
+        logger.info(f"Starting transcription: transcript_id={transcript_id}, lecture_id={lecture_id}")
+        logger.info(f"Audio path: {audio_path}")
+
+        # Verify audio file exists
+        if not os.path.exists(audio_path):
+            raise FileNotFoundError(f"Audio file not found at: {audio_path}")
+        logger.info(f"Audio file exists: {os.path.getsize(audio_path)} bytes")
+
+        payload = {
+            'lecture_id': str(lecture_id),
+            'audio_path': audio_path,
+            'method': 'file',
+        }
+        logger.info(f"Sending transcription request to AI service: {AI_SERVICE_TRANSCRIBE_URL}")
+        resp = req_lib.post(
+            AI_SERVICE_TRANSCRIBE_URL,
+            json=payload,
+            timeout=300,  # Deepgram transcription can take minutes
+        )
+        logger.info(f"AI service response status: {resp.status_code}")
+        resp.raise_for_status()
+        data = resp.json()
+
+        logger.info(f"Transcription response: chunks_created={data.get('chunks_created')}, transcript_words={data.get('word_count')}")
+
+        # Import here to avoid circular imports at module level
+        LectureMaterial.objects.filter(id=transcript_id).update(
+            content_text=data.get('transcript', ''),
+            is_processed_for_rag=True,
+        )
+        logger.info(f"Transcription succeeded for lecture_id={lecture_id}: {data.get('chunks_created')} chunks stored")
+
+    except Exception as exc:
+        logger.error(
+            f"Transcription failed for lecture_id={lecture_id}: {exc}",
+            exc_info=True
+        )
+        # Mark as failed so status polling doesn't spin forever
+        LectureMaterial.objects.filter(id=transcript_id).update(
+            content_text='[TRANSCRIPTION_FAILED]',
+        )
 
 
 @extend_schema(tags=['Transcriptions'])
@@ -45,15 +101,22 @@ class StartTranscriptionView(APIView):
                 status=status.HTTP_200_OK
             )
         
-        # TODO: In production, trigger async transcription job here
-        # For now, create a placeholder transcript entry
+        # Create placeholder transcript entry
         transcript = LectureMaterial.objects.create(
             lecture=lecture,
             m_type='TRANSCRIPT',
             content_text='',  # Will be filled by AI service
             is_processed_for_rag=False
         )
-        
+
+        # Trigger AI service transcription in background thread
+        audio_path = str(lecture.audio.audio_file.path)
+        threading.Thread(
+            target=_run_transcription,
+            args=(str(transcript.id), str(lecture_id), audio_path),
+            daemon=True,
+        ).start()
+
         return Response(
             {
                 'message': 'Transcription started',
@@ -95,12 +158,15 @@ class TranscriptionStatusView(APIView):
             })
         
         # Determine status based on content
-        if transcript.content_text:
+        if transcript.content_text and transcript.content_text != '[TRANSCRIPTION_FAILED]':
             transcription_status = 'completed'
             progress = 100
             message = 'Transcription completed successfully'
+        elif transcript.content_text == '[TRANSCRIPTION_FAILED]':
+            transcription_status = 'failed'
+            progress = 0
+            message = 'Transcription failed. Please try again.'
         else:
-            # TODO: Check actual status from AI service
             transcription_status = 'processing'
             progress = 50
             message = 'Transcription in progress'

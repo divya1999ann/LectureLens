@@ -1,37 +1,44 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router';
 import { Calendar, FileText, Download, ChevronLeft, Share2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { mockSubjects, mockLectures } from '../../utils/mockData';
+import { lecturesAPI, getErrorMessage } from '../../services/api';
 
 const LectureDetail = () => {
   const { subjectId, lectureId } = useParams();
-  const subject = mockSubjects.find(s => s.id === parseInt(subjectId));
-  const lecture = mockLectures.find(l => l.id === parseInt(lectureId));
+  const [lecture, setLecture] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  if (!lecture || !subject) {
+  useEffect(() => {
+    const fetchLecture = async () => {
+      try {
+        setLoading(true);
+        const { data } = await lecturesAPI.get(lectureId);
+        setLecture(data);
+      } catch (err) {
+        setError(getErrorMessage(err));
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLecture();
+  }, [lectureId]);
+
+  if (loading) return <div className="flex items-center justify-center h-[calc(100vh-6rem)]">Loading...</div>;
+  if (error || !lecture) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-6rem)]">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Lecture not found</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {error || 'Lecture not found'}
+        </h2>
         <Link to="/dashboard" className="text-blue-600 hover:underline mt-4">
           Return to Dashboard
         </Link>
       </div>
     );
   }
-
-  // Mock summary content based on lecture
-  const lectureSummary = `
-    This lecture provided a comprehensive overview of ${lecture.title}. 
-    Key topics covered included:
-    1. Introduction to the core concepts and terminology.
-    2. Analysis of current industry standards and practices.
-    3. Practical implementation strategies for scalable systems.
-    4. Review of recent case studies and performance metrics.
-    
-    The professor emphasized the importance of understanding the trade-offs between different architectural approaches. Students are encouraged to review the provided examples and complete the associated practice problems before the next session.
-  `;
 
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] -m-8">
@@ -46,9 +53,7 @@ const LectureDetail = () => {
           </Link>
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span className="font-medium text-gray-900 dark:text-white">{subject.code}</span>
-              <span>•</span>
-              <span>Lecture {lecture.number}</span>
+              <span className="font-medium text-gray-900 dark:text-white">{lecture.subject_title}</span>
             </div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">{lecture.title}</h1>
           </div>
@@ -57,7 +62,7 @@ const LectureDetail = () => {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 text-sm text-gray-500 mr-4">
             <Calendar className="w-4 h-4" />
-            <span>{new Date(lecture.date).toLocaleDateString()}</span>
+            <span>{new Date(lecture.lecture_date).toLocaleDateString()}</span>
             <span className="mx-1">•</span>
             <FileText className="w-4 h-4" />
             <span>{lecture.pages}</span>
@@ -106,7 +111,7 @@ const LectureDetail = () => {
               </div>
 
               <div className="mt-auto p-4 text-xs text-gray-400 border-t border-gray-100 dark:border-gray-700">
-                Page 1 of {parseInt(lecture.pages) || 15}
+                Lecture loaded
               </div>
             </div>
           </div>
@@ -122,8 +127,8 @@ const LectureDetail = () => {
           </div>
           <div className="p-6 overflow-y-auto flex-1">
             <div className="prose dark:prose-invert text-sm max-w-none">
-              <p className="whitespace-pre-line text-gray-600 dark:text-gray-300 leading-relaxed">
-                {lectureSummary}
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                {lecture.summary || 'No summary available for this lecture.'}
               </p>
             </div>
 

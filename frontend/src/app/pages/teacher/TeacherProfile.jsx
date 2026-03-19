@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, Lock, Bell, Moon, Sun, Mic, Upload, Users, Presentation } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -8,17 +8,17 @@ import { Switch } from '../../components/ui/switch';
 import { Badge } from '../../components/ui/badge';
 import useAuthStore from '../../store/authStore';
 import useThemeStore from '../../store/themeStore';
-import { mockSubjects, mockLectures, mockEnrollments } from '../../utils/mockData';
+import { coursesAPI } from '../../services/api';
 
 const TeacherProfile = () => {
     const { user } = useAuthStore();
     const { darkMode, toggleDarkMode } = useThemeStore();
 
     const [formData, setFormData] = useState({
-        name: user?.name || 'Dr. Sarah Smith',
-        email: user?.email || 'sarah@lectureai.com',
+        name: user?.name || '',
+        email: user?.email || '',
         department: 'Computer Science',
-        bio: 'Specialized in Machine Learning and AI systems with over 10 years of teaching experience.',
+        bio: 'Specialized in teaching and education.',
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
@@ -26,13 +26,25 @@ const TeacherProfile = () => {
 
     const [emailNotifications, setEmailNotifications] = useState(true);
     const [saved, setSaved] = useState(false);
+    const [mySubjects, setMySubjects] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // Teacher stats from mock data
-    const mySubjects = mockSubjects.filter(s => s.instructorId === 2);
-    const myLectures = mockLectures.filter(l => mySubjects.some(s => s.id === l.subjectId));
-    const totalStudents = mySubjects.reduce((sum, s) => {
-        return sum + mockEnrollments.filter(e => e.subjectId === s.id).length;
-    }, 0);
+    useEffect(() => {
+        const fetchSubjects = async () => {
+            try {
+                setLoading(true);
+                const { data } = await coursesAPI.list(user?.id);
+                setMySubjects(data.results ?? data);
+            } catch (err) {
+                console.error('Failed to load subjects');
+            } finally {
+                setLoading(false);
+            }
+        };
+        if (user?.id) {
+            fetchSubjects();
+        }
+    }, [user?.id]);
 
     const handleSave = (e) => {
         e.preventDefault();
@@ -77,18 +89,14 @@ const TeacherProfile = () => {
                     </div>
 
                     {/* Stats Row */}
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                         <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-xl p-3 text-center border border-blue-100 dark:border-blue-900/20">
-                            <p className="text-xl font-bold text-gray-900 dark:text-white">{mySubjects.length}</p>
+                            <p className="text-xl font-bold text-gray-900 dark:text-white">{loading ? '—' : mySubjects.length}</p>
                             <p className="text-[10px] text-gray-500 uppercase tracking-wide font-semibold mt-0.5">Subjects</p>
                         </div>
                         <div className="bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl p-3 text-center border border-emerald-100 dark:border-emerald-900/20">
-                            <p className="text-xl font-bold text-gray-900 dark:text-white">{myLectures.length}</p>
+                            <p className="text-xl font-bold text-gray-900 dark:text-white">—</p>
                             <p className="text-[10px] text-gray-500 uppercase tracking-wide font-semibold mt-0.5">Lectures</p>
-                        </div>
-                        <div className="bg-purple-50/50 dark:bg-purple-900/10 rounded-xl p-3 text-center border border-purple-100 dark:border-purple-900/20">
-                            <p className="text-xl font-bold text-gray-900 dark:text-white">{totalStudents}</p>
-                            <p className="text-[10px] text-gray-500 uppercase tracking-wide font-semibold mt-0.5">Students</p>
                         </div>
                     </div>
                 </CardContent>
@@ -102,31 +110,20 @@ const TeacherProfile = () => {
                         <h2 className="font-semibold text-sm text-gray-900 dark:text-white">Subjects I Teach</h2>
                     </div>
                     <div className="space-y-2">
-                        {mySubjects.map(subject => {
-                            const lectureCount = mockLectures.filter(l => l.subjectId === subject.id).length;
-                            const studentCount = mockEnrollments.filter(e => e.subjectId === subject.id).length;
-                            return (
+                        {loading ? (
+                            <div className="text-center py-4 text-gray-400">Loading...</div>
+                        ) : mySubjects.length === 0 ? (
+                            <div className="text-center py-4 text-gray-400">No subjects yet</div>
+                        ) : (
+                            mySubjects.map(subject => (
                                 <div key={subject.id} className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-gray-800/30 rounded-xl border border-gray-100 dark:border-gray-800">
-                                    <div className="flex items-center gap-3">
-                                        <Badge variant="secondary" className="text-[10px] font-bold px-2">{subject.code}</Badge>
-                                        <div>
-                                            <p className="font-medium text-sm text-gray-900 dark:text-white">{subject.name}</p>
-                                            <p className="text-xs text-gray-400">{subject.semester}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-4 text-xs text-gray-400">
-                                        <span className="flex items-center gap-1">
-                                            <Presentation className="w-3 h-3" />
-                                            {lectureCount}
-                                        </span>
-                                        <span className="flex items-center gap-1">
-                                            <Users className="w-3 h-3" />
-                                            {studentCount}
-                                        </span>
+                                    <div>
+                                        <p className="font-medium text-sm text-gray-900 dark:text-white">{subject.title}</p>
+                                        <p className="text-xs text-gray-400">Created {new Date(subject.created_at).toLocaleDateString()}</p>
                                     </div>
                                 </div>
-                            );
-                        })}
+                            ))
+                        )}
                     </div>
                 </CardContent>
             </Card>

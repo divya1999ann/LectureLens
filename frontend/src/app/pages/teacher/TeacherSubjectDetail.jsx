@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import {
     ArrowLeft, FileAudio, FileText, Download, Play, Pause, Upload,
@@ -9,17 +9,37 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { ScrollArea } from '../../components/ui/scroll-area';
-import { mockSubjects, mockLectures, sampleTranscript } from '../../utils/mockData';
+import { coursesAPI, getErrorMessage } from '../../services/api';
 
 const TeacherSubjectDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const subject = mockSubjects.find(s => s.id === parseInt(id));
-    const lectures = mockLectures.filter(l => l.subjectId === parseInt(id));
+    const [subject, setSubject] = useState(null);
+    const [lectures, setLectures] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [expandedLecture, setExpandedLecture] = useState(null);
     const [activeTranscriptTab, setActiveTranscriptTab] = useState(null);
     const [playingAudio, setPlayingAudio] = useState(null);
 
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                const { data } = await coursesAPI.get(id);
+                setSubject(data);
+                setLectures(data.lectures || []);
+            } catch (err) {
+                setError(getErrorMessage(err));
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, [id]);
+
+    if (loading) return <div className="p-8">Loading...</div>;
+    if (error) return <div className="p-8 text-red-500">{error}</div>;
     if (!subject) {
         return (
             <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-300">
@@ -51,16 +71,8 @@ const TeacherSubjectDetail = () => {
                     <ArrowLeft className="w-5 h-5" />
                 </Button>
                 <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1">
-                        <Badge variant="secondary" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-none font-bold">
-                            {subject.code}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs font-medium">
-                            {subject.semester}
-                        </Badge>
-                    </div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-                        {subject.name}
+                        {subject.title}
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-2xl">
                         {subject.description}
@@ -78,30 +90,6 @@ const TeacherSubjectDetail = () => {
                         <div>
                             <p className="text-xs text-gray-500 font-medium">Lectures</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white">{lectures.length}</p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-none bg-emerald-50/50 dark:bg-emerald-900/10">
-                    <CardContent className="p-4 flex items-center gap-3">
-                        <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                            <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <div>
-                            <p className="text-xs text-gray-500 font-medium">Students</p>
-                            <p className="text-lg font-bold text-gray-900 dark:text-white">{subject.studentCount}</p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-none bg-purple-50/50 dark:bg-purple-900/10">
-                    <CardContent className="p-4 flex items-center gap-3">
-                        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                            <Clock className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                        </div>
-                        <div>
-                            <p className="text-xs text-gray-500 font-medium">Last Updated</p>
-                            <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                {new Date(subject.lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                            </p>
                         </div>
                     </CardContent>
                 </Card>
@@ -129,13 +117,11 @@ const TeacherSubjectDetail = () => {
                     </Card>
                 ) : (
                     <div className="space-y-3">
-                        {lectures.map((lecture) => {
+                        {lectures.map((lecture, idx) => {
                             const isExpanded = expandedLecture === lecture.id;
                             const audioFiles = [
                                 { id: 1, name: `${lecture.title}_Recording.mp3`, size: '45.2 MB', duration: '45:20' }
                             ];
-                            const slidesFiles = lecture.hasPPT ? [{ id: 1, name: `${lecture.title}_Slides.pdf`, size: '2.4 MB', pages: lecture.pages }] : [];
-                            const notesFiles = lecture.hasNotes ? [{ id: 1, name: `${lecture.title}_Notes.pdf`, size: '1.1 MB' }] : [];
 
                             return (
                                 <Card
@@ -156,7 +142,7 @@ const TeacherSubjectDetail = () => {
                                                 ? 'bg-blue-600 text-white'
                                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                                                 }`}>
-                                                {lecture.number}
+                                                {idx + 1}
                                             </div>
 
                                             {/* Title + Meta */}
@@ -167,9 +153,9 @@ const TeacherSubjectDetail = () => {
                                                 <div className="flex items-center gap-3 mt-1">
                                                     <span className="text-xs text-gray-400 flex items-center gap-1">
                                                         <Calendar className="w-3 h-3" />
-                                                        {new Date(lecture.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                        {new Date(lecture.lecture_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                                     </span>
-                                                    <span className="text-xs text-gray-400">{lecture.pages}</span>
+                                                    <span className="text-xs text-gray-400">{lecture.material_count} materials</span>
                                                 </div>
                                             </div>
 
@@ -179,16 +165,6 @@ const TeacherSubjectDetail = () => {
                                                     <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center" title="Audio">
                                                         <Headphones className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                                                     </div>
-                                                    {lecture.hasPPT && (
-                                                        <div className="w-6 h-6 rounded-md bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center" title="Slides">
-                                                            <Presentation className="w-3 h-3 text-orange-600 dark:text-orange-400" />
-                                                        </div>
-                                                    )}
-                                                    {lecture.hasNotes && (
-                                                        <div className="w-6 h-6 rounded-md bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center" title="Notes">
-                                                            <StickyNote className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-                                                        </div>
-                                                    )}
                                                     {lecture.hasTranscript && (
                                                         <div className="w-6 h-6 rounded-md bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center" title="Transcript">
                                                             <FileText className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
@@ -320,11 +296,13 @@ const TeacherSubjectDetail = () => {
                                                             }`}>
                                                             <ScrollArea className={activeTranscriptTab === lecture.id ? 'h-[400px]' : 'h-24'}>
                                                                 <div className="p-4 space-y-3">
-                                                                    {sampleTranscript.split('\n\n').map((paragraph, idx) => (
-                                                                        <p key={idx} className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                                                                            {paragraph}
+                                                                    {lecture.summary ? (
+                                                                        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                                                                            {lecture.summary}
                                                                         </p>
-                                                                    ))}
+                                                                    ) : (
+                                                                        <p className="text-sm text-gray-400">No transcript available for this lecture.</p>
+                                                                    )}
                                                                 </div>
                                                             </ScrollArea>
                                                             {activeTranscriptTab !== lecture.id && (

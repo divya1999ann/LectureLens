@@ -7,7 +7,7 @@ import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
 import useAuthStore from '../../store/authStore';
 import { coursesAPI, getErrorMessage } from '../../services/api';
-import { getCurrentDate } from '../../utils/mockData';
+import { getCurrentDate } from '../../utils/dateUtils';
 
 const StatCard = ({ title, value, icon: Icon, iconBg, subtext, animated }) => (
   <Card>

@@ -12,12 +12,10 @@ import { Badge } from '../../components/ui/badge';
 import { Avatar, AvatarFallback } from '../../components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import useChatStore from '../../store/chatStore';
-import { mockSubjects, mockLectures, mockAIResponses } from '../../utils/mockData';
+import { chatAPI, coursesAPI, getErrorMessage } from '../../services/api';
 
 const ChatInterface = () => {
   const { id } = useParams();
-  const subject = mockSubjects.find(s => s.id === parseInt(id));
-  const subjectLectures = mockLectures.filter(l => l.subjectId === parseInt(id));
 
   const {
     selectedLectures,
@@ -31,11 +29,31 @@ const ChatInterface = () => {
     deleteChat
   } = useChatStore();
 
+  const [subject, setSubject] = useState(null);
+  const [subjectLectures, setSubjectLectures] = useState([]);
+  const [lecturesLoading, setLecturesLoading] = useState(true);
   const [searchLecture, setSearchLecture] = useState('');
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [lectureDialogOpen, setLectureDialogOpen] = useState(false);
   const messagesEndRef = useRef(null);
+
+  // Fetch subject and lectures
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLecturesLoading(true);
+        const { data } = await coursesAPI.get(id);
+        setSubject(data);
+        setSubjectLectures(data.lectures || []);
+      } catch (err) {
+        console.error('Failed to load lectures:', getErrorMessage(err));
+      } finally {
+        setLecturesLoading(false);
+      }
+    };
+    fetchData();
+  }, [id]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -46,8 +64,7 @@ const ChatInterface = () => {
   }, [messages]);
 
   const filteredLectures = subjectLectures.filter(lecture =>
-    lecture.title.toLowerCase().includes(searchLecture.toLowerCase()) ||
-    lecture.number.toString().includes(searchLecture)
+    lecture.title.toLowerCase().includes(searchLecture.toLowerCase())
   );
 
   const handleLectureToggle = (lectureId) => {
@@ -75,32 +92,54 @@ const ChatInterface = () => {
       timestamp: new Date().toISOString()
     };
 
-    addMessage(userMessage, parseInt(id));
+    addMessage(userMessage, id);
+    const questionText = inputMessage;
     setInputMessage('');
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    // Build chat_history from current messages (last 8 = 4 exchanges)
+    const historyForApi = messages.slice(-8).map(m => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    try {
+      const { data } = await chatAPI.sendMessage(
+        questionText,
+        selectedLectures,
+        historyForApi,
+      );
+
+      // Map AI service citations to component shape
+      const citations = (data.citations || []).map((cite, idx) => ({
+        id: idx + 1,
+        lecture: cite.lecture_title || `Lecture ${cite.lecture_id}`,
+        excerpt: cite.chunk_text,
+        timestamp: null,
+      }));
+
       const aiResponse = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: mockAIResponses[Math.floor(Math.random() * mockAIResponses.length)]
-          .replace('{lecture}', `Lecture ${selectedLectures[0]}`)
-          .replace('{count}', selectedLectures.length),
+        content: data.answer,
         timestamp: new Date().toISOString(),
-        citations: selectedLectures.slice(0, 2).map((lectureId, idx) => {
-          const lecture = mockLectures.find(l => l.id === lectureId);
-          return {
-            id: idx + 1,
-            lecture: `Lecture ${lecture.number}: ${lecture.title}`,
-            excerpt: 'ML systems combine traditional software engineering principles with machine learning models...',
-            timestamp: '00:15:32'
-          };
-        })
+        citations,
       };
-      addMessage(aiResponse, parseInt(id));
+
+      addMessage(aiResponse, id);
+    } catch (err) {
+      const errMessage = getErrorMessage(err);
+      const errorResponse = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: `Sorry, I encountered an error: ${errMessage}`,
+        timestamp: new Date().toISOString(),
+        citations: [],
+      };
+      addMessage(errorResponse, id);
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   const suggestedPrompts = [
@@ -147,7 +186,7 @@ const ChatInterface = () => {
     return groups;
   };
 
-  const groupedChats = groupChatsByDate(chatHistory.filter(c => c.subjectId === parseInt(id)));
+  const groupedChats = groupChatsByDate(chatHistory.filter(c => c.subjectId === id));
 
   return (
     <div className="flex h-[calc(100vh-6rem)] gap-4">
@@ -445,41 +484,47 @@ const ChatInterface = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto -mx-2 px-2 scroll-smooth [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 [&::-webkit-scrollbar-track]:bg-transparent">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
-                {filteredLectures.map(lecture => {
-                  const isSelected = selectedLectures.includes(lecture.id);
-                  return (
-                    <div
-                      key={lecture.id}
-                      onClick={() => handleLectureToggle(lecture.id)}
-                      className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer group flex flex-col gap-2 ${isSelected
-                        ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 shadow-sm'
-                        : 'border-transparent bg-white dark:bg-gray-800 hover:border-gray-200 dark:hover:border-gray-700 shadow-sm hover:shadow-md'
-                        }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <Badge variant="outline" className={`bg-white dark:bg-gray-900 ${isSelected ? 'border-blue-200 text-blue-700' : 'border-gray-200'}`}>
-                          Lecture {lecture.number}
-                        </Badge>
-                        {isSelected && (
-                          <div className="h-5 w-5 bg-blue-500 rounded-full flex items-center justify-center animate-in zoom-in">
-                            <Check className="w-3 h-3 text-white" />
-                          </div>
-                        )}
-                      </div>
+              {lecturesLoading ? (
+                <div className="flex items-center justify-center h-32 text-gray-500">Loading lectures...</div>
+              ) : filteredLectures.length === 0 ? (
+                <div className="flex items-center justify-center h-32 text-gray-500">No lectures found</div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
+                  {filteredLectures.map((lecture, idx) => {
+                    const isSelected = selectedLectures.includes(lecture.id);
+                    return (
+                      <div
+                        key={lecture.id}
+                        onClick={() => handleLectureToggle(lecture.id)}
+                        className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer group flex flex-col gap-2 ${isSelected
+                          ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 shadow-sm'
+                          : 'border-transparent bg-white dark:bg-gray-800 hover:border-gray-200 dark:hover:border-gray-700 shadow-sm hover:shadow-md'
+                          }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <Badge variant="outline" className={`bg-white dark:bg-gray-900 ${isSelected ? 'border-blue-200 text-blue-700' : 'border-gray-200'}`}>
+                            Lecture {idx + 1}
+                          </Badge>
+                          {isSelected && (
+                            <div className="h-5 w-5 bg-blue-500 rounded-full flex items-center justify-center animate-in zoom-in">
+                              <Check className="w-3 h-3 text-white" />
+                            </div>
+                          )}
+                        </div>
 
-                      <h4 className={`font-semibold text-sm line-clamp-2 ${isSelected ? 'text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-white'}`}>
-                        {lecture.title}
-                      </h4>
+                        <h4 className={`font-semibold text-sm line-clamp-2 ${isSelected ? 'text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-white'}`}>
+                          {lecture.title}
+                        </h4>
 
-                      <div className="mt-auto pt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700/50">
-                        <span>{lecture.pages}</span>
-                        <span>{new Date(lecture.date).toLocaleDateString()}</span>
+                        <div className="mt-auto pt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700/50">
+                          <span>{lecture.material_count} materials</span>
+                          <span>{new Date(lecture.lecture_date).toLocaleDateString()}</span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 

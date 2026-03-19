@@ -15,11 +15,14 @@ rag_service = RAGService()
 async def chat_with_lectures(request: ChatRequest):
     """
     RAG chatbot endpoint
-    
+
     Query lecture content using retrieval-augmented generation.
     Supports multi-lecture queries and maintains chat history context.
     """
     try:
+        print(f"\n=== CHAT REQUEST ===")
+        print(f"Lectures: {request.lecture_ids}")
+        print(f"Question: {request.question}")
         logger.info(f"Chat request for lectures: {request.lecture_ids}")
         logger.info(f"Question: {request.question}")
         

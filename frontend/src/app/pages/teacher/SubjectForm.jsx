@@ -5,16 +5,16 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { Card, CardContent } from '../../components/ui/card';
-import { mockSubjects } from '../../utils/mockData';
 
 const SubjectForm = () => {
     const { id } = useParams(); // Should contain subject ID if editing
     const navigate = useNavigate();
     const isEditing = !!id;
 
-    const initialData = isEditing
-        ? mockSubjects.find(s => s.id === parseInt(id)) || {}
-        : { name: '', code: '', description: '', duration: '', students: [] };
+    const initialData = {
+        title: '',
+        description: ''
+    };
 
     const [formData, setFormData] = useState(initialData);
 

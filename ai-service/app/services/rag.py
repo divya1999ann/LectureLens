@@ -14,7 +14,7 @@ settings = get_settings()
 class RAGState(TypedDict):
     """State for RAG pipeline"""
     question: str
-    lecture_ids: List[int]
+    lecture_ids: List[str]
     chat_history: List[Dict[str, str]]
     query_embedding: List[float]
     retrieved_chunks: List[Dict[str, Any]]
@@ -75,16 +75,23 @@ class RAGService:
     
     def _retrieve_chunks(self, state: RAGState) -> RAGState:
         """Node 2: Retrieve relevant chunks from Pinecone"""
+        print(f"→ Retrieving chunks from {len(state['lecture_ids'])} lectures...")
+        print(f"  Lecture IDs: {state['lecture_ids']}")
         logger.info(f"Retrieving chunks from {len(state['lecture_ids'])} lectures...")
-        
+        logger.info(f"Lecture IDs: {state['lecture_ids']}")
+
         chunks = self.vector_store.query_lectures(
             query_embedding=state["query_embedding"],
             lecture_ids=state["lecture_ids"],
             top_k=5  # Top 5 per lecture
         )
-        
+
         state["retrieved_chunks"] = chunks
+        print(f"✓ Retrieved {len(chunks)} chunks")
         logger.info(f"Retrieved {len(chunks)} chunks")
+        if chunks:
+            print(f"  Scores: {[c['score'] for c in chunks[:3]]}")
+            logger.info(f"Chunk scores: {[c['score'] for c in chunks[:3]]}")
         return state
     
     def _check_relevance(self, state: RAGState) -> RAGState:
@@ -92,17 +99,25 @@ class RAGService:
         # Check if we have chunks with good relevance scores
         relevant_chunks = [
             chunk for chunk in state["retrieved_chunks"]
-            if chunk["score"] > 0.35  # Similarity threshold
+            if chunk["score"] > 0.1  # Similarity threshold (lowered for this embedding model)
         ]
-        
+
+        print(f"→ Checking relevance (threshold=0.35)...")
+        print(f"  Total chunks: {len(state['retrieved_chunks'])}")
+        print(f"  Relevant chunks (score > 0.35): {len(relevant_chunks)}")
+        if state["retrieved_chunks"]:
+            print(f"  Max score: {max(c['score'] for c in state['retrieved_chunks'])}")
+
         state["has_relevant_info"] = len(relevant_chunks) > 0
-        
+
         if state["has_relevant_info"]:
             state["retrieved_chunks"] = relevant_chunks
+            print(f"✓ Found {len(relevant_chunks)} relevant chunks - using RAG")
             logger.info(f"Found {len(relevant_chunks)} relevant chunks")
         else:
+            print(f"✗ No relevant chunks found (scores too low) - using FALLBACK")
             logger.info("No highly relevant chunks found")
-        
+
         return state
     
     def _build_context(self, state: RAGState) -> RAGState:
@@ -248,7 +263,7 @@ Please provide a helpful response following the guidelines above."""
     async def query(
         self,
         question: str,
-        lecture_ids: List[int],
+        lecture_ids: List[str],
         chat_history: List[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         """

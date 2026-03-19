@@ -5,9 +5,11 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { mockSubjects, sampleLiveTexts } from '../../utils/mockData';
+import { coursesAPI, getErrorMessage } from '../../services/api';
+import useAuthStore from '../../store/authStore';
 
 const LiveTranscription = () => {
+  const { user } = useAuthStore();
   const [recording, setRecording] = useState(false);
   const [paused, setPaused] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -15,8 +17,39 @@ const LiveTranscription = () => {
   const [subjectId, setSubjectId] = useState('');
   const [lectureNumber, setLectureNumber] = useState('');
   const [wordCount, setWordCount] = useState(0);
+  const [mySubjects, setMySubjects] = useState([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(true);
 
-  const mySubjects = mockSubjects.filter(s => s.instructorId === 2);
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        setSubjectsLoading(true);
+        const { data } = await coursesAPI.list(user?.id);
+        setMySubjects(data.results ?? data);
+      } catch (err) {
+        console.error('Failed to load subjects:', getErrorMessage(err));
+      } finally {
+        setSubjectsLoading(false);
+      }
+    };
+    if (user?.id) {
+      fetchSubjects();
+    }
+  }, [user?.id]);
+
+  // Sample transcription sentences for simulation
+  const sampleTexts = [
+    "Today we'll discuss the key concepts of this topic and how they apply in practice.",
+    "Let's start with the fundamentals and build our understanding from there.",
+    "This is an important concept that you'll encounter frequently in your work.",
+    "Notice how this principle connects to what we covered previously.",
+    "Real-world applications often require this approach to be modified slightly.",
+    "Let me break this down into smaller, more manageable pieces.",
+    "The important thing to remember is the underlying principle here.",
+    "Based on recent research, we now understand this better than before.",
+    "This technique has proven to be very effective in practice.",
+    "Let's look at some examples to solidify your understanding."
+  ];
 
   // Timer effect
   useEffect(() => {
@@ -34,7 +67,7 @@ const LiveTranscription = () => {
     let interval;
     if (recording && !paused) {
       interval = setInterval(() => {
-        const randomText = sampleLiveTexts[Math.floor(Math.random() * sampleLiveTexts.length)];
+        const randomText = sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
         const timestamp = formatDuration(duration);
         setTranscript(prev => {
           const newText = prev + `\n\n[${timestamp}] ${randomText}`;
@@ -125,14 +158,14 @@ const LiveTranscription = () => {
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="subject">Subject</Label>
-                <Select value={subjectId} onValueChange={setSubjectId} disabled={recording}>
+                <Select value={subjectId} onValueChange={setSubjectId} disabled={recording || subjectsLoading}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select subject" />
+                    <SelectValue placeholder={subjectsLoading ? 'Loading subjects...' : 'Select subject'} />
                   </SelectTrigger>
                   <SelectContent>
                     {mySubjects.map((subject) => (
-                      <SelectItem key={subject.id} value={subject.id.toString()}>
-                        {subject.code} - {subject.name}
+                      <SelectItem key={subject.id} value={subject.id}>
+                        {subject.title}
                       </SelectItem>
                     ))}
                   </SelectContent>

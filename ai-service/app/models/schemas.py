@@ -11,14 +11,14 @@ class TranscriptionMethod(str, Enum):
 
 class TranscribeRequest(BaseModel):
     """Request for transcription"""
-    lecture_id: int
+    lecture_id: str
     audio_path: Optional[str] = None  # For file upload
     audio_url: Optional[str] = None   # For live recording
     method: TranscriptionMethod = TranscriptionMethod.FILE
-    
+
 class TranscribeResponse(BaseModel):
     """Response after transcription"""
-    lecture_id: int
+    lecture_id: str
     transcript: str
     word_count: int
     duration_seconds: float
@@ -35,12 +35,12 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     """Request for RAG chat"""
     question: str
-    lecture_ids: List[int]  # Which lectures to query
+    lecture_ids: List[str]  # Which lectures to query
     chat_history: List[ChatMessage] = Field(default_factory=list)  # Last 4 messages
-    
+
 class LectureCitation(BaseModel):
     """Citation for a lecture chunk"""
-    lecture_id: int
+    lecture_id: str
     lecture_title: Optional[str] = None
     chunk_text: str
     relevance_score: float
@@ -49,7 +49,7 @@ class ChatResponse(BaseModel):
     """Response from RAG chat"""
     answer: str
     citations: List[LectureCitation]
-    lecture_ids_used: List[int]
+    lecture_ids_used: List[str]
     status: str = "success"
 
 # ==================== Health Check ====================

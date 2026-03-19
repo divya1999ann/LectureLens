@@ -43,7 +43,7 @@ class VectorStoreService:
     
     def upsert_chunks(
         self,
-        lecture_id: int,
+        lecture_id: str,
         chunks: List[Dict[str, Any]],
         embeddings: List[List[float]]
     ) -> int:
@@ -99,34 +99,39 @@ class VectorStoreService:
     def query_lectures(
         self,
         query_embedding: List[float],
-        lecture_ids: List[int],
+        lecture_ids: List[str],
         top_k: int = 5
     ) -> List[Dict[str, Any]]:
         """
         Query vectors across multiple lecture namespaces
-        
+
         Args:
             query_embedding: Embedding vector for the query
             lecture_ids: List of lecture IDs to search
             top_k: Number of results per lecture
-            
+
         Returns:
             List of matches with metadata and scores
         """
         try:
             index = self.pc.Index(self.index_name)
             all_results = []
-            
+
             for lecture_id in lecture_ids:
                 namespace = f"lecture_{lecture_id}"
-                
+                print(f"  → Querying namespace: {namespace}")
+                logger.info(f"Querying namespace: {namespace}")
+
                 results = index.query(
                     vector=query_embedding,
                     top_k=top_k,
                     namespace=namespace,
                     include_metadata=True
                 )
-                
+
+                print(f"    ✓ Found {len(results.matches)} matches in namespace {namespace}")
+                logger.info(f"Found {len(results.matches)} matches in namespace {namespace}")
+
                 for match in results.matches:
                     all_results.append({
                         "lecture_id": lecture_id,
@@ -134,17 +139,17 @@ class VectorStoreService:
                         "chunk_index": match.metadata.get("chunk_index", 0),
                         "score": match.score
                     })
-            
+
             # Sort by score descending
             all_results.sort(key=lambda x: x['score'], reverse=True)
-            
+
             return all_results[:top_k * len(lecture_ids)]
-            
+
         except Exception as e:
-            logger.error(f"Error querying lectures: {e}")
+            logger.error(f"Error querying lectures: {e}", exc_info=True)
             raise
     
-    def delete_lecture(self, lecture_id: int) -> bool:
+    def delete_lecture(self, lecture_id: str) -> bool:
         """
         Delete all vectors for a lecture
         

@@ -20,7 +20,7 @@ vector_store = VectorStoreService()
 async def transcribe_audio(request: TranscribeRequest):
     """
     Transcribe audio and embed into Pinecone
-    
+
     Complete pipeline:
     1. Transcribe audio using Deepgram
     2. Chunk the transcript
@@ -28,6 +28,7 @@ async def transcribe_audio(request: TranscribeRequest):
     4. Store in Pinecone
     """
     try:
+        print(f"\n=== TRANSCRIBE START: lecture {request.lecture_id} ===")
         logger.info(f"Starting transcription for lecture {request.lecture_id}")
         
         # Step 1: Transcribe audio
@@ -50,31 +51,38 @@ async def transcribe_audio(request: TranscribeRequest):
         transcript = transcription_result["transcript"]
         duration = transcription_result["duration_seconds"]
         word_count = transcription_result["word_count"]
-        
+
+        print(f"✓ Transcription complete. Words: {word_count}, Duration: {duration}s")
         logger.info(f"Transcription complete. Words: {word_count}, Duration: {duration}s")
-        
+
         # Step 2: Chunk the transcript
+        print(f"→ Chunking transcript...")
         logger.info("Chunking transcript...")
         chunks = chunk_text(
             text=transcript,
             lecture_id=request.lecture_id
         )
+        print(f"✓ Created {len(chunks)} chunks")
         logger.info(f"Created {len(chunks)} chunks")
-        
+
         # Step 3: Generate embeddings
+        print(f"→ Generating embeddings...")
         logger.info("Generating embeddings...")
         chunk_texts = [chunk["text"] for chunk in chunks]
         embeddings = embedding_service.embed_texts(chunk_texts)
+        print(f"✓ Generated {len(embeddings)} embeddings")
         logger.info(f"Generated {len(embeddings)} embeddings")
-        
+
         # Step 4: Store in Pinecone
+        print(f"→ Storing in Pinecone...")
         logger.info("Storing in Pinecone...")
         chunks_stored = vector_store.upsert_chunks(
             lecture_id=request.lecture_id,
             chunks=chunks,
             embeddings=embeddings
         )
-        
+
+        print(f"✓ Successfully processed lecture {request.lecture_id}: {chunks_stored} chunks stored")
         logger.info(f"Successfully processed lecture {request.lecture_id}")
         
         return TranscribeResponse(

@@ -172,10 +172,23 @@ export const transcriptionsAPI = {
     get: (lectureId) => api.get(`/transcriptions/${lectureId}/`),
 };
 
-// ─── Chat (Phase 2 placeholder) ───────────────────────────────────────────────
+// ─── Chat ──────────────────────────────────────────────────────────────────────
 export const chatAPI = {
     /** GET /api/chat/sessions/ */
     getSessions: () => api.get('/chat/sessions/'),
+
+    /**
+     * POST /api/chat/ask/
+     * @param {string} question
+     * @param {string[]} lectureIds  — UUIDs
+     * @param {Array<{role:string, content:string}>} chatHistory
+     */
+    sendMessage: (question, lectureIds, chatHistory = []) =>
+        api.post('/chat/ask/', {
+            question,
+            lecture_ids: lectureIds,
+            chat_history: chatHistory,
+        }),
 };
 
 export default api;

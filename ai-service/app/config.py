@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     ai_service_port: int = 8001
     
     # Model Configuration
-    llm_model: str = "openai/gpt-oss-120b:free"
+    llm_model: str = "mistralai/mistral-7b-instruct-v0.1"
     embedding_model: str = "nvidia/llama-nemotron-embed-vl-1b-v2:free"
     embedding_dimension: int = 4096
     

@@ -1,19 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router';
 import { Calendar, FileText, File, MessageSquare, ChevronLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { mockSubjects, mockLectures } from '../../utils/mockData';
+import { coursesAPI, getErrorMessage } from '../../services/api';
 
 const SubjectDetail = () => {
   const { id } = useParams();
-  const subject = mockSubjects.find(s => s.id === parseInt(id));
-  const lectures = mockLectures.filter(l => l.subjectId === parseInt(id));
+  const [subject, setSubject] = useState(null);
+  const [lectures, setLectures] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const { data } = await coursesAPI.get(id);
+        setSubject(data);
+        setLectures(data.lectures || []);
+      } catch (err) {
+        setError(getErrorMessage(err));
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [id]);
+
+  if (loading) return <div className="p-8">Loading...</div>;
+  if (error) return <div className="p-8 text-red-500">{error}</div>;
   if (!subject) {
-    return <div>Subject not found</div>;
+    return <div className="p-8">Subject not found</div>;
   }
 
   return (
@@ -28,13 +48,10 @@ const SubjectDetail = () => {
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-8 text-white">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-4xl font-bold mb-2">{subject.code}</h1>
-            <h2 className="text-2xl font-light mb-4">{subject.name}</h2>
+            <h1 className="text-4xl font-bold mb-2">{subject.title}</h1>
+            <h2 className="text-2xl font-light mb-4">{subject.title}</h2>
             <div className="flex items-center gap-4 text-sm">
-              <Badge variant="secondary" className="bg-white/20 text-white border-0">
-                {subject.semester}
-              </Badge>
-              <span>Instructor: {subject.instructor}</span>
+              <span>Instructor: {subject.teacher_name}</span>
             </div>
           </div>
           <Link to={`/subjects/${id}/chat`}>
@@ -55,14 +72,14 @@ const SubjectDetail = () => {
         </TabsList>
 
         <TabsContent value="lectures" className="space-y-4">
-          {lectures.map(lecture => (
+          {lectures.map((lecture, idx) => (
             <Card key={lecture.id} className="hover:shadow-lg transition-shadow">
               <CardContent className="pt-6">
                 <div className="flex items-start gap-6">
                   <div className="flex-shrink-0">
                     <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
                       <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                        {lecture.number}
+                        {idx + 1}
                       </span>
                     </div>
                   </div>
@@ -75,11 +92,11 @@ const SubjectDetail = () => {
                     <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
-                        <span>{new Date(lecture.date).toLocaleDateString()}</span>
+                        <span>{new Date(lecture.lecture_date).toLocaleDateString()}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <FileText className="w-4 h-4" />
-                        <span>{lecture.pages}</span>
+                        <span>{lecture.material_count} materials</span>
                       </div>
                     </div>
 
