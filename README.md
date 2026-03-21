@@ -79,21 +79,7 @@ cp .env.example .env
 Open `backend/.env` and fill in the values:
 
 ```env
-SECRET_KEY=your-secret-key-here-change-in-production
-DEBUG=True
-
-# Leave these blank to use SQLite (recommended for local dev)
-# DB_NAME=lecturelens
-# DB_USER=lecturelens_user
-# DB_PASSWORD=strongpassword
-# DB_HOST=localhost
-# DB_PORT=5432
-
-ALLOWED_HOSTS=localhost,127.0.0.1
-CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
-
-ACCESS_TOKEN_LIFETIME=60
-REFRESH_TOKEN_LIFETIME=1440
+No need of env in backend code
 ```
 
 > **SQLite vs PostgreSQL**: By default the backend uses SQLite (`db.sqlite3`) which requires no extra setup. To use PostgreSQL, uncomment the `DB_*` variables, create the database, and update `settings.py` to use the PostgreSQL `DATABASES` config.
@@ -157,15 +143,6 @@ Open `ai-service/.env` and fill in your API keys:
 OPENROUTER_API_KEY=sk-or-v1-...
 PINECONE_API_KEY=pcsk_...
 DEEPGRAM_API_KEY=...
-
-# Pinecone index settings — create an index named "lecturelens" in your Pinecone dashboard
-PINECONE_INDEX_NAME=lecturelens
-PINECONE_ENVIRONMENT=us-east-1
-
-# Model settings (these defaults work with the free OpenRouter tier)
-LLM_MODEL=mistralai/mistral-7b-instruct-v0.1
-EMBEDDING_MODEL=nvidia/llama-nemotron-embed-vl-1b-v2:free
-EMBEDDING_DIMENSION=4096
 ```
 
 #### Creating the Pinecone index
