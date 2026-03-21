@@ -119,9 +119,9 @@ const TeacherSubjectDetail = () => {
                     <div className="space-y-3">
                         {lectures.map((lecture, idx) => {
                             const isExpanded = expandedLecture === lecture.id;
-                            const audioFiles = [
-                                { id: 1, name: `${lecture.title}_Recording.mp3`, size: '45.2 MB', duration: '45:20' }
-                            ];
+                            const audioFiles = [];
+                            const slidesFiles = [];
+                            const notesFiles = [];
 
                             return (
                                 <Card

@@ -7,10 +7,9 @@ import {
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
-import { Checkbox } from '../../components/ui/checkbox';
 import { Badge } from '../../components/ui/badge';
 import { Avatar, AvatarFallback } from '../../components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import useChatStore from '../../store/chatStore';
 import { chatAPI, coursesAPI, getErrorMessage } from '../../services/api';
 
@@ -259,7 +258,7 @@ const ChatInterface = () => {
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              {subject?.name}
+              {subject?.title}
               <ChevronRight className="w-4 h-4 text-gray-400" />
               <span className="text-gray-500 font-normal text-sm">AI Assistant</span>
             </h2>

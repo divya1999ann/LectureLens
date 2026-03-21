@@ -3,7 +3,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema
 from .models import Profile
-from .serializers import UserProfileSerializer
+from .serializers import UserProfileSerializer, UserListSerializer
+from apps.authentication.models import User
+from apps.authentication.permissions import IsAdminUser
 
 
 @extend_schema(tags=['Users'])
@@ -31,3 +33,20 @@ class CurrentUserProfileView(generics.RetrieveUpdateAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+@extend_schema(tags=['Users'])
+class UserListView(generics.ListAPIView):
+    """
+    GET /api/users/?role=STUDENT|TEACHER|ADMIN — admin only
+    Returns all users, optionally filtered by role.
+    """
+    serializer_class = UserListSerializer
+    permission_classes = (IsAuthenticated, IsAdminUser)
+
+    def get_queryset(self):
+        role = self.request.query_params.get('role', '').upper()
+        qs = User.objects.select_related('profile').order_by('-created_at')
+        if role in ('STUDENT', 'TEACHER', 'ADMIN'):
+            qs = qs.filter(role=role)
+        return qs

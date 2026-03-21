@@ -1,6 +1,22 @@
 from rest_framework import serializers
 from .models import Profile
 from apps.authentication.serializers import UserSerializer
+from apps.authentication.models import User
+
+
+class UserListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for admin user listings"""
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'role', 'is_active', 'created_at', 'full_name')
+
+    def get_full_name(self, obj):
+        try:
+            return obj.profile.full_name or ''
+        except Exception:
+            return ''
 
 
 class ProfileSerializer(serializers.ModelSerializer):

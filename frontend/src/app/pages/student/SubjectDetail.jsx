@@ -48,8 +48,7 @@ const SubjectDetail = () => {
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-8 text-white">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-4xl font-bold mb-2">{subject.title}</h1>
-            <h2 className="text-2xl font-light mb-4">{subject.title}</h2>
+            <h1 className="text-4xl font-bold mb-4">{subject.title}</h1>
             <div className="flex items-center gap-4 text-sm">
               <span>Instructor: {subject.teacher_name}</span>
             </div>

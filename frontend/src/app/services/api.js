@@ -114,6 +114,9 @@ export const usersAPI = {
 
     /** PUT /api/users/me/ */
     updateMe: (data) => api.put('/users/me/', data),
+
+    /** GET /api/users/?role=STUDENT|TEACHER|ADMIN — admin only */
+    list: (role) => api.get('/users/', { params: role ? { role } : {} }),
 };
 
 // ─── Courses (Subjects) ───────────────────────────────────────────────────────

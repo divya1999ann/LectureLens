@@ -102,9 +102,9 @@ class RAGService:
             if chunk["score"] > 0.1  # Similarity threshold (lowered for this embedding model)
         ]
 
-        print(f"→ Checking relevance (threshold=0.35)...")
+        print(f"→ Checking relevance (threshold=0.1)...")
         print(f"  Total chunks: {len(state['retrieved_chunks'])}")
-        print(f"  Relevant chunks (score > 0.35): {len(relevant_chunks)}")
+        print(f"  Relevant chunks (score > 0.1): {len(relevant_chunks)}")
         if state["retrieved_chunks"]:
             print(f"  Max score: {max(c['score'] for c in state['retrieved_chunks'])}")
 

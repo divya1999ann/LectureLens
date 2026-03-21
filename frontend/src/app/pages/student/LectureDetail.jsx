@@ -65,7 +65,7 @@ const LectureDetail = () => {
             <span>{new Date(lecture.lecture_date).toLocaleDateString()}</span>
             <span className="mx-1">•</span>
             <FileText className="w-4 h-4" />
-            <span>{lecture.pages}</span>
+            <span>{lecture.materials?.length ?? 0} materials</span>
           </div>
           <Button variant="outline" size="sm">
             <Share2 className="w-4 h-4 mr-2" />
@@ -132,14 +132,6 @@ const LectureDetail = () => {
               </p>
             </div>
 
-            <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-900">
-              <h4 className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider mb-2">Key Takeaways</h4>
-              <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 space-y-1">
-                <li>Understanding system architecture</li>
-                <li>Design patterns for scalability</li>
-                <li>Performance optimization techniques</li>
-              </ul>
-            </div>
           </div>
         </div>
       </div>

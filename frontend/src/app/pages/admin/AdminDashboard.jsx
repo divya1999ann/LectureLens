@@ -6,7 +6,7 @@ import {
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { coursesAPI, getErrorMessage } from '../../services/api';
+import { coursesAPI, usersAPI, getErrorMessage } from '../../services/api';
 
 const StatCard = ({ title, value, subtitle, icon: Icon, color, onClick, loading }) => {
   const colorMap = {
@@ -42,6 +42,8 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   const [courses, setCourses] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -49,9 +51,14 @@ const AdminDashboard = () => {
     setLoading(true);
     setError('');
     try {
-      const { data } = await coursesAPI.list();
-      const results = data.results ?? data;
-      setCourses(results);
+      const [coursesRes, teachersRes, studentsRes] = await Promise.all([
+        coursesAPI.list(),
+        usersAPI.list('TEACHER'),
+        usersAPI.list('STUDENT'),
+      ]);
+      setCourses(coursesRes.data.results ?? coursesRes.data);
+      setTeachers(teachersRes.data.results ?? teachersRes.data);
+      setStudents(studentsRes.data.results ?? studentsRes.data);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -88,20 +95,20 @@ const AdminDashboard = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Teachers"
-          value="0"
+          value={loading ? '—' : teachers.length}
           subtitle="Active faculty"
           icon={GraduationCap}
           color="blue"
-          loading={false}
+          loading={loading}
           onClick={() => navigate('/admin/teachers')}
         />
         <StatCard
           title="Students"
-          value="0"
+          value={loading ? '—' : students.length}
           subtitle="Enrolled"
           icon={GraduationCap}
           color="emerald"
-          loading={false}
+          loading={loading}
           onClick={() => navigate('/admin/students')}
         />
         <StatCard
@@ -126,21 +133,41 @@ const AdminDashboard = () => {
 
       {/* Quick Overview Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Teachers — still mock (no user-management API in phase 1) */}
+        {/* Teachers — real API data */}
         <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
           <div className="flex items-center justify-between p-5 pb-3 border-b border-gray-100 dark:border-gray-800">
-            <div>
-              <h2 className="font-semibold text-gray-900 dark:text-white text-sm">Teachers</h2>
-              <p className="text-[10px] text-amber-500 mt-0.5">Sample data — no user-management API yet</p>
-            </div>
+            <h2 className="font-semibold text-gray-900 dark:text-white text-sm">Teachers</h2>
             <Button variant="ghost" size="sm" className="text-xs text-blue-600 hover:text-blue-700 h-7 px-2 gap-1" onClick={() => navigate('/admin/teachers')}>
               View all <ArrowRight className="w-3 h-3" />
             </Button>
           </div>
           <CardContent className="p-0">
-            <div className="px-5 py-6 text-center text-sm text-gray-400">
-              User management API coming soon
-            </div>
+            {loading ? (
+              [1, 2, 3].map(i => (
+                <div key={i} className="flex items-center gap-3 px-5 py-3 border-b border-gray-50 dark:border-gray-800/50 last:border-b-0">
+                  <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+                  <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                </div>
+              ))
+            ) : teachers.length === 0 ? (
+              <div className="px-5 py-6 text-center text-sm text-gray-400">No teachers yet.</div>
+            ) : (
+              teachers.slice(0, 4).map(teacher => (
+                <div
+                  key={teacher.id}
+                  className="flex items-center gap-3 px-5 py-3 border-b border-gray-50 dark:border-gray-800/50 last:border-b-0 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer"
+                  onClick={() => navigate('/admin/teachers')}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shrink-0">
+                    {(teacher.full_name || teacher.email).charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{teacher.full_name || '—'}</p>
+                    <p className="text-xs text-gray-400 truncate">{teacher.email}</p>
+                  </div>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
 
