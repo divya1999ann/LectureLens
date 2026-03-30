@@ -177,20 +177,31 @@ export const transcriptionsAPI = {
 
 // ─── Chat ──────────────────────────────────────────────────────────────────────
 export const chatAPI = {
-    /** GET /api/chat/sessions/ */
-    getSessions: () => api.get('/chat/sessions/'),
+    /** GET /api/chat/sessions/?subject=<id> */
+    getSessions: (subjectId) =>
+        api.get('/chat/sessions/', { params: subjectId ? { subject: subjectId } : {} }),
+
+    /** GET /api/chat/sessions/{id}/ */
+    getSession: (sessionId) => api.get(`/chat/sessions/${sessionId}/`),
+
+    /** DELETE /api/chat/sessions/{id}/ */
+    deleteSession: (sessionId) => api.delete(`/chat/sessions/${sessionId}/`),
 
     /**
      * POST /api/chat/ask/
      * @param {string} question
      * @param {string[]} lectureIds  — UUIDs
      * @param {Array<{role:string, content:string}>} chatHistory
+     * @param {string|null} sessionId  — existing session UUID (optional)
+     * @param {string|null} subjectId  — subject UUID for new session (optional)
      */
-    sendMessage: (question, lectureIds, chatHistory = []) =>
+    sendMessage: (question, lectureIds, chatHistory = [], sessionId = null, subjectId = null) =>
         api.post('/chat/ask/', {
             question,
             lecture_ids: lectureIds,
             chat_history: chatHistory,
+            ...(sessionId && { session_id: sessionId }),
+            ...(subjectId && { subject_id: subjectId }),
         }),
 };
 

@@ -1,117 +1,95 @@
 import { create } from 'zustand';
+import { chatAPI } from '../services/api';
 
-const useChatStore = create((set) => ({
+const useChatStore = create((set, get) => ({
   selectedLectures: [],
-  currentChatId: null,
+  currentSessionId: null,
   messages: [],
-  chatHistory: [
-    {
-      id: '1',
-      subjectId: 1,
-      firstMessage: 'Can you summarize lecture 1?',
-      lectureCount: 2,
-      messageCount: 8,
-      timestamp: '2024-02-08T14:30:00',
-      messages: [
-        { id: 1, role: 'user', content: 'Can you summarize lecture 1?', timestamp: '2024-02-08T14:30:00' },
-        {
-          id: 2,
-          role: 'assistant',
-          content: 'Based on Lecture 1: Introduction to ML Systems, here\'s a comprehensive summary of the main concepts:\n\n1. **ML Systems Overview**: Machine Learning systems combine traditional software engineering with ML models to create production-ready applications.\n\n2. **Key Components**: Data pipelines, model training infrastructure, serving layer, and monitoring systems.\n\n3. **Challenges**: Scalability, data quality, model drift, and integration complexity.',
-          timestamp: '2024-02-08T14:30:05',
-          citations: [
-            { id: 1, lecture: 'Lecture 1: Introduction', excerpt: 'ML systems combine traditional software engineering principles with machine learning models...', timestamp: '00:15:32' }
-          ]
-        }
-      ]
-    },
-    {
-      id: '2',
-      subjectId: 1,
-      firstMessage: 'Explain the data pipeline architecture',
-      lectureCount: 1,
-      messageCount: 5,
-      timestamp: '2024-02-07T10:15:00',
-      messages: []
-    }
-  ],
+  chatHistory: [],       // list of ChatSession summaries
+  historyLoading: false,
 
   setSelectedLectures: (lectures) => set({ selectedLectures: lectures }),
 
-  addMessage: (message, subjectId) => set((state) => {
-    const newMessages = [...state.messages, message];
-
-    // If active chat exists, update it
-    if (state.currentChatId) {
-      const updatedHistory = state.chatHistory.map(chat =>
-        chat.id === state.currentChatId
-          ? {
-            ...chat,
-            messages: newMessages,
-            timestamp: message.timestamp,
-            messageCount: newMessages.length,
-            // Update preview text if it's the last message? Or keep first message as title?
-            // Typically title is first message, but timestamp updates.
-          }
-          : chat
-      );
-      // Sort history to put newest first? 
-      // simple map doesn't sort. For now just update.
-      return { messages: newMessages, chatHistory: updatedHistory };
-    }
-
-    // Create new chat
-    const newChatId = Date.now().toString();
-    const newChat = {
-      id: newChatId,
-      subjectId: subjectId,
-      firstMessage: message.content,
-      lectureCount: state.selectedLectures.length,
-      messageCount: 1,
-      timestamp: message.timestamp,
-      messages: newMessages
-    };
-
-    return {
-      currentChatId: newChatId,
-      messages: newMessages,
-      chatHistory: [newChat, ...state.chatHistory]
-    };
-  }),
-
-  clearMessages: () => set({ messages: [] }),
-
-  setCurrentChat: (chatId) => {
-    const state = useChatStore.getState();
-    const chat = state.chatHistory.find(c => c.id === chatId);
-    if (chat) {
-      set({
-        currentChatId: chatId,
-        messages: chat.messages || [],
-        selectedLectures: []
-      });
+  // ── Load sessions from backend for a given subject ────────────────────────
+  loadSessions: async (subjectId) => {
+    set({ historyLoading: true });
+    try {
+      const { data } = await chatAPI.getSessions(subjectId);
+      const sessions = data.results ?? data;
+      set({ chatHistory: sessions });
+    } catch {
+      // silently fail — history just won't show
+    } finally {
+      set({ historyLoading: false });
     }
   },
 
-  createNewChat: () => set({
-    currentChatId: null,
+  // ── Switch to an existing session and load its messages ───────────────────
+  setCurrentSession: async (sessionId) => {
+    try {
+      const { data } = await chatAPI.getSession(sessionId);
+      // Map backend message shape → component shape
+      const messages = (data.messages || []).map((m) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        timestamp: m.timestamp,
+        citations: (m.citations || []).map((c, idx) => ({
+          id: idx + 1,
+          lecture: c.lecture_title || `Lecture ${c.lecture_id}`,
+          excerpt: c.chunk_text,
+          timestamp: null,
+        })),
+      }));
+      set({ currentSessionId: sessionId, messages });
+    } catch {
+      // ignore
+    }
+  },
+
+  // ── Start a fresh conversation ────────────────────────────────────────────
+  createNewSession: () => set({
+    currentSessionId: null,
     messages: [],
-    selectedLectures: []
+    selectedLectures: [],
   }),
 
-  deleteChat: (chatId) => set((state) => {
-    const newHistory = state.chatHistory.filter(c => c.id !== chatId);
-    const shouldClearCurrent = state.currentChatId === chatId;
+  // ── Add a message locally (optimistic) and track session id ──────────────
+  addMessage: (message, sessionId) => {
+    set((state) => {
+      const newMessages = [...state.messages, message];
+      // If backend returned a new session id, update currentSessionId
+      const resolvedSessionId = sessionId || state.currentSessionId;
+      return { messages: newMessages, currentSessionId: resolvedSessionId };
+    });
+  },
 
-    return {
-      chatHistory: newHistory,
-      ...(shouldClearCurrent && {
-        currentChatId: null,
-        messages: [],
-        selectedLectures: []
-      })
-    };
-  })
+  // ── Refresh history after a message is sent ───────────────────────────────
+  refreshHistory: async (subjectId) => {
+    try {
+      const { data } = await chatAPI.getSessions(subjectId);
+      set({ chatHistory: data.results ?? data });
+    } catch {
+      // ignore
+    }
+  },
+
+  // ── Delete a session ──────────────────────────────────────────────────────
+  deleteSession: async (sessionId) => {
+    try {
+      await chatAPI.deleteSession(sessionId);
+      set((state) => {
+        const newHistory = state.chatHistory.filter((c) => c.id !== sessionId);
+        const isCurrent = state.currentSessionId === sessionId;
+        return {
+          chatHistory: newHistory,
+          ...(isCurrent && { currentSessionId: null, messages: [], selectedLectures: [] }),
+        };
+      });
+    } catch {
+      // ignore
+    }
+  },
 }));
 
 export default useChatStore;

@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router';
 import {
-  Search, Plus, Send, Copy, RefreshCw, BookOpen, X,
-  MessageSquare, Edit2, Trash2, FileText, Check, ChevronRight, Filter
+  Search, Plus, Send, Copy, RefreshCw, BookOpen,
+  MessageSquare, Trash2, FileText, Check, ChevronRight
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -22,10 +22,12 @@ const ChatInterface = () => {
     messages,
     addMessage,
     chatHistory,
-    currentChatId,
-    setCurrentChat,
-    createNewChat,
-    deleteChat
+    currentSessionId,
+    setCurrentSession,
+    createNewSession,
+    deleteSession,
+    loadSessions,
+    refreshHistory,
   } = useChatStore();
 
   const [subject, setSubject] = useState(null);
@@ -37,7 +39,7 @@ const ChatInterface = () => {
   const [lectureDialogOpen, setLectureDialogOpen] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // Fetch subject and lectures
+  // Fetch subject, lectures, and chat history
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -52,6 +54,8 @@ const ChatInterface = () => {
       }
     };
     fetchData();
+    loadSessions(id);
+    createNewSession();
   }, [id]);
 
   const scrollToBottom = () => {
@@ -91,7 +95,7 @@ const ChatInterface = () => {
       timestamp: new Date().toISOString()
     };
 
-    addMessage(userMessage, id);
+    addMessage(userMessage, null);
     const questionText = inputMessage;
     setInputMessage('');
     setIsLoading(true);
@@ -107,6 +111,8 @@ const ChatInterface = () => {
         questionText,
         selectedLectures,
         historyForApi,
+        currentSessionId,
+        id,
       );
 
       // Map AI service citations to component shape
@@ -125,7 +131,8 @@ const ChatInterface = () => {
         citations,
       };
 
-      addMessage(aiResponse, id);
+      addMessage(aiResponse, data.session_id);
+      refreshHistory(id);
     } catch (err) {
       const errMessage = getErrorMessage(err);
       const errorResponse = {
@@ -135,7 +142,7 @@ const ChatInterface = () => {
         timestamp: new Date().toISOString(),
         citations: [],
       };
-      addMessage(errorResponse, id);
+      addMessage(errorResponse, null);
     } finally {
       setIsLoading(false);
     }
@@ -148,13 +155,13 @@ const ChatInterface = () => {
     'Compare lectures 1 and 2'
   ];
 
-  const handleDeleteChat = (chatId) => {
+  const handleDeleteSession = (sessionId) => {
     if (confirm('Are you sure you want to delete this chat?')) {
-      deleteChat(chatId);
+      deleteSession(sessionId);
     }
   };
 
-  const groupChatsByDate = (chats) => {
+  const groupSessionsByDate = (sessions) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterday = new Date(today);
@@ -162,30 +169,20 @@ const ChatInterface = () => {
     const lastWeek = new Date(today);
     lastWeek.setDate(lastWeek.getDate() - 7);
 
-    const groups = {
-      Today: [],
-      Yesterday: [],
-      'Last 7 Days': [],
-      Older: []
-    };
+    const groups = { Today: [], Yesterday: [], 'Last 7 Days': [], Older: [] };
 
-    chats.forEach(chat => {
-      const chatDate = new Date(chat.timestamp);
-      if (chatDate >= today) {
-        groups.Today.push(chat);
-      } else if (chatDate >= yesterday) {
-        groups.Yesterday.push(chat);
-      } else if (chatDate >= lastWeek) {
-        groups['Last 7 Days'].push(chat);
-      } else {
-        groups.Older.push(chat);
-      }
+    sessions.forEach(session => {
+      const d = new Date(session.updated_at);
+      if (d >= today) groups.Today.push(session);
+      else if (d >= yesterday) groups.Yesterday.push(session);
+      else if (d >= lastWeek) groups['Last 7 Days'].push(session);
+      else groups.Older.push(session);
     });
 
     return groups;
   };
 
-  const groupedChats = groupChatsByDate(chatHistory.filter(c => c.subjectId === id));
+  const groupedChats = groupSessionsByDate(chatHistory);
 
   return (
     <div className="flex h-[calc(100vh-6rem)] gap-4">
@@ -195,7 +192,7 @@ const ChatInterface = () => {
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Chat History</h3>
-            <Button size="sm" onClick={createNewChat} className="h-7 text-xs gap-1">
+            <Button size="sm" onClick={createNewSession} className="h-7 text-xs gap-1">
               <Plus className="w-3.5 h-3.5" />
               New
             </Button>
@@ -216,25 +213,22 @@ const ChatInterface = () => {
                     {chats.map(chat => (
                       <div
                         key={chat.id}
-                        onClick={() => setCurrentChat(chat.id)}
-                        className={`group p-2.5 rounded-lg cursor-pointer transition-colors ${currentChatId === chat.id
+                        onClick={() => setCurrentSession(chat.id)}
+                        className={`group p-2.5 rounded-lg cursor-pointer transition-colors ${currentSessionId === chat.id
                           ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
                           : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-transparent'
                           }`}
                       >
                         <p className="text-sm text-gray-900 dark:text-white truncate mb-0.5">
-                          {chat.firstMessage}
+                          {chat.first_message || chat.title}
                         </p>
                         <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
-                          <span>{chat.lectureCount} lectures</span>
+                          <span>{chat.message_count} messages</span>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="hover:text-blue-500 transition-colors">
-                              <Edit2 className="w-3 h-3" />
-                            </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteChat(chat.id);
+                                handleDeleteSession(chat.id);
                               }}
                               className="hover:text-red-500 transition-colors"
                             >
