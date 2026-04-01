@@ -18,7 +18,7 @@ const AddStudentModal = ({ open, onOpenChange, onAdded }) => {
         setLoading(true);
         setError('');
         try {
-            await authAPI.register({ ...formData, role: 'student' });
+            await authAPI.register({ ...formData, role: 'STUDENT' });
             setFormData({ full_name: '', email: '', password: '', password_confirm: '' });
             onOpenChange(false);
             onAdded();

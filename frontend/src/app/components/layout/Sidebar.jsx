@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import {
-  Home, Users, Settings, User, Book, Video, Upload, Mic,
-  BarChart, MessageSquare, ChevronLeft, ChevronRight,
+  Home, Users, User, Upload, Mic,
+  ChevronLeft, ChevronRight,
   Moon, Sun, LogOut, GraduationCap, Menu, X, Sparkles
 } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -281,9 +281,6 @@ const Sidebar = ({ role, collapsed, setCollapsed }) => {
                   <h4 className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {subject.title}
                   </h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                    {subject.description || subject.teacher_email || ''}
-                  </p>
                 </div>
               </button>
             ))}

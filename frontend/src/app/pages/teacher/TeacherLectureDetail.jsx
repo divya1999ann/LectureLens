@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import {
-    ArrowLeft, FileAudio, FileText, Download, Trash2, Edit2, Play, Pause, Save, MoreHorizontal
+    ArrowLeft, FileAudio, Download, Trash2, Play, Save, MoreHorizontal,
+    Sparkles, CheckCircle, AlertCircle, Loader2, RefreshCw
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -10,9 +11,10 @@ import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
+import { Progress } from '../../components/ui/progress';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
-import { lecturesAPI, getErrorMessage } from '../../services/api';
+import { lecturesAPI, transcriptionsAPI, getErrorMessage } from '../../services/api';
 
 const TeacherLectureDetail = () => {
     const { id } = useParams();
@@ -20,6 +22,16 @@ const TeacherLectureDetail = () => {
     const [lecture, setLecture] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [activeTab, setActiveTab] = useState('overview');
+    const [saving, setSaving] = useState(false);
+
+    // editData starts empty — populated once lecture loads
+    const [editData, setEditData] = useState({ title: '', summary: '' });
+
+    const [transcriptStatus, setTranscriptStatus] = useState(null); // null | 'not_started' | 'processing' | 'completed' | 'failed'
+    const [transcriptStarting, setTranscriptStarting] = useState(false);
+    const [transcriptError, setTranscriptError] = useState('');
+    const pollRef = useRef(null);
 
     useEffect(() => {
         const fetchLecture = async () => {
@@ -27,6 +39,7 @@ const TeacherLectureDetail = () => {
                 setLoading(true);
                 const { data } = await lecturesAPI.get(id);
                 setLecture(data);
+                setEditData({ title: data.title, summary: data.summary || '' });
             } catch (err) {
                 setError(getErrorMessage(err));
             } finally {
@@ -36,14 +49,77 @@ const TeacherLectureDetail = () => {
         fetchLecture();
     }, [id]);
 
-    const [activeTab, setActiveTab] = useState('overview');
-    const [isPlaying, setIsPlaying] = useState(false);
+    // Fetch transcript status once lecture loads, then poll while processing
+    useEffect(() => {
+        if (!lecture) return;
+
+        const fetchStatus = async () => {
+            try {
+                const { data } = await transcriptionsAPI.status(id);
+                setTranscriptStatus(data.status);
+                if (data.status === 'processing') {
+                    pollRef.current = setTimeout(fetchStatus, 5000);
+                }
+            } catch {
+                setTranscriptStatus('not_started');
+            }
+        };
+
+        fetchStatus();
+        return () => clearTimeout(pollRef.current);
+    }, [lecture, id]);
+
+    const handleStartTranscription = async () => {
+        setTranscriptStarting(true);
+        setTranscriptError('');
+        try {
+            await transcriptionsAPI.start(id);
+            setTranscriptStatus('processing');
+            // Start polling
+            const poll = async () => {
+                try {
+                    const { data } = await transcriptionsAPI.status(id);
+                    setTranscriptStatus(data.status);
+                    if (data.status === 'processing') {
+                        pollRef.current = setTimeout(poll, 5000);
+                    }
+                } catch { /* ignore */ }
+            };
+            pollRef.current = setTimeout(poll, 5000);
+        } catch (err) {
+            setTranscriptError(getErrorMessage(err));
+        } finally {
+            setTranscriptStarting(false);
+        }
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await lecturesAPI.update(id, editData);
+            setLecture(prev => ({ ...prev, ...editData }));
+        } catch (err) {
+            alert(getErrorMessage(err));
+        } finally {
+            setSaving(false);
+        }
+    };
 
     if (loading) return <div className="p-8 text-center">Loading...</div>;
     if (error || !lecture) return <div className="p-8 text-center">{error || 'Lecture not found'}</div>;
 
-    // Audio files from lecture materials
-    const audioFiles = lecture.has_audio ? [{ id: 1, name: `${lecture.title}_Audio`, size: 'N/A' }] : [];
+    // Build audio file info from real API data
+    const audioFile = lecture.audio || null;
+    const audioFiles = audioFile ? [{
+        id: audioFile.id,
+        name: `${lecture.title} — Audio`,
+        duration: audioFile.duration_seconds
+            ? `${Math.floor(audioFile.duration_seconds / 60)}m ${audioFile.duration_seconds % 60}s`
+            : 'Duration unknown',
+        size: audioFile.file_size
+            ? `${(audioFile.file_size / 1048576).toFixed(1)} MB`
+            : 'Size unknown',
+    }] : [];
 
     return (
         <div className="space-y-6">
@@ -141,6 +217,63 @@ const TeacherLectureDetail = () => {
                         </Card>
                     </div>
 
+                    {/* Transcription Card */}
+                    {lecture.audio && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-emerald-500" />
+                                    AI Transcription
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {transcriptStatus === 'completed' && (
+                                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                                        <CheckCircle className="w-4 h-4" />
+                                        <span className="text-sm font-medium">Transcribed and indexed — chat is ready</span>
+                                    </div>
+                                )}
+                                {transcriptStatus === 'processing' && (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <span className="text-sm font-medium">Transcription in progress…</span>
+                                        </div>
+                                        <Progress value={50} className="h-1.5" />
+                                    </div>
+                                )}
+                                {transcriptStatus === 'failed' && (
+                                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                                        <AlertCircle className="w-4 h-4" />
+                                        <span className="text-sm font-medium">Transcription failed</span>
+                                    </div>
+                                )}
+                                {(transcriptStatus === 'not_started' || transcriptStatus === null) && (
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                        No transcript yet. Start transcription to enable AI chat for this lecture.
+                                    </p>
+                                )}
+                                {transcriptError && (
+                                    <p className="text-xs text-red-500">{transcriptError}</p>
+                                )}
+                                {(transcriptStatus === 'not_started' || transcriptStatus === 'failed' || transcriptStatus === null) && (
+                                    <Button
+                                        onClick={handleStartTranscription}
+                                        disabled={transcriptStarting}
+                                        className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+                                    >
+                                        {transcriptStarting
+                                            ? <><Loader2 className="w-4 h-4 animate-spin" /> Starting…</>
+                                            : transcriptStatus === 'failed'
+                                                ? <><RefreshCw className="w-4 h-4" /> Retry Transcription</>
+                                                : <><Sparkles className="w-4 h-4" /> Start Transcription</>
+                                        }
+                                    </Button>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+
                 </TabsContent>
 
                 {/* Edit Tab */}
@@ -152,20 +285,27 @@ const TeacherLectureDetail = () => {
                         <CardContent className="space-y-6">
                             <div className="space-y-2">
                                 <Label>Lecture Title</Label>
-                                <Input defaultValue={lecture.title} />
+                                <Input
+                                    value={editData.title}
+                                    onChange={(e) => setEditData(prev => ({ ...prev, title: e.target.value }))}
+                                />
                             </div>
                             <div className="space-y-2">
                                 <Label>Subject</Label>
-                                <Input disabled defaultValue={lecture.subject_title} />
+                                <Input disabled value={lecture.subject_title} onChange={() => {}} />
                             </div>
                             <div className="space-y-2">
                                 <Label>Summary</Label>
-                                <Textarea rows={4} defaultValue={lecture.summary || 'No summary'} />
+                                <Textarea
+                                    rows={4}
+                                    value={editData.summary}
+                                    onChange={(e) => setEditData(prev => ({ ...prev, summary: e.target.value }))}
+                                />
                             </div>
                             <div className="flex justify-end pt-4 border-t">
-                                <Button className="bg-green-600 hover:bg-green-700">
+                                <Button onClick={handleSave} disabled={saving} className="bg-green-600 hover:bg-green-700">
                                     <Save className="w-4 h-4 mr-2" />
-                                    Save Changes
+                                    {saving ? 'Saving...' : 'Save Changes'}
                                 </Button>
                             </div>
                         </CardContent>
