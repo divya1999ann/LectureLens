@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { Plus, Search, Edit, Trash2, Users } from 'lucide-react';
+import { Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -12,6 +12,7 @@ const SubjectList = () => {
     const [subjects, setSubjects] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [deleting, setDeleting] = useState(null);
 
     useEffect(() => {
         const fetchSubjects = async () => {
@@ -29,6 +30,19 @@ const SubjectList = () => {
             fetchSubjects();
         }
     }, [user?.id]);
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('Delete this subject? All its lectures will also be deleted. This cannot be undone.')) return;
+        setDeleting(id);
+        try {
+            await coursesAPI.delete(id);
+            setSubjects(prev => prev.filter(s => s.id !== id));
+        } catch (err) {
+            alert(getErrorMessage(err));
+        } finally {
+            setDeleting(null);
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -87,7 +101,13 @@ const SubjectList = () => {
                                                             <Edit className="w-4 h-4" />
                                                         </Button>
                                                     </Link>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-red-600">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-gray-500 hover:text-red-600"
+                                                        disabled={deleting === subject.id}
+                                                        onClick={() => handleDelete(subject.id)}
+                                                    >
                                                         <Trash2 className="w-4 h-4" />
                                                     </Button>
                                                 </div>

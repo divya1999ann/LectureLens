@@ -4,7 +4,7 @@
  */
 import axios from 'axios';
 
-const BASE_URL = 'http://127.0.0.1:8000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 
 // ─── Axios Instance ──────────────────────────────────────────────────────────
 const api = axios.create({
@@ -112,8 +112,8 @@ export const usersAPI = {
     /** GET /api/users/me/ */
     getMe: () => api.get('/users/me/'),
 
-    /** PUT /api/users/me/ */
-    updateMe: (data) => api.put('/users/me/', data),
+    /** PATCH /api/users/me/ — partial update */
+    updateMe: (data) => api.patch('/users/me/', data),
 
     /** GET /api/users/?role=STUDENT|TEACHER|ADMIN — admin only */
     list: (role) => api.get('/users/', { params: role ? { role } : {} }),

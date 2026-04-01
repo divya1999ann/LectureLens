@@ -9,7 +9,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { ScrollArea } from '../../components/ui/scroll-area';
-import { coursesAPI, getErrorMessage } from '../../services/api';
+import { coursesAPI, lecturesAPI, getErrorMessage } from '../../services/api';
 
 const TeacherSubjectDetail = () => {
     const { id } = useParams();
@@ -21,6 +21,9 @@ const TeacherSubjectDetail = () => {
     const [expandedLecture, setExpandedLecture] = useState(null);
     const [activeTranscriptTab, setActiveTranscriptTab] = useState(null);
     const [playingAudio, setPlayingAudio] = useState(null);
+    // Lazy-loaded full lecture details keyed by lecture ID
+    const [lectureDetails, setLectureDetails] = useState({});
+    const [detailLoading, setDetailLoading] = useState({});
 
     useEffect(() => {
         const fetchData = async () => {
@@ -53,9 +56,22 @@ const TeacherSubjectDetail = () => {
         );
     }
 
-    const toggleLecture = (lectureId) => {
-        setExpandedLecture(expandedLecture === lectureId ? null : lectureId);
+    const toggleLecture = async (lectureId) => {
+        const isClosing = expandedLecture === lectureId;
+        setExpandedLecture(isClosing ? null : lectureId);
         setActiveTranscriptTab(null);
+        // Lazy-load full lecture details on first expand
+        if (!isClosing && !lectureDetails[lectureId]) {
+            setDetailLoading(prev => ({ ...prev, [lectureId]: true }));
+            try {
+                const { data } = await lecturesAPI.get(lectureId);
+                setLectureDetails(prev => ({ ...prev, [lectureId]: data }));
+            } catch (err) {
+                console.error('Failed to load lecture detail:', err);
+            } finally {
+                setDetailLoading(prev => ({ ...prev, [lectureId]: false }));
+            }
+        }
     };
 
     return (
@@ -119,9 +135,28 @@ const TeacherSubjectDetail = () => {
                     <div className="space-y-3">
                         {lectures.map((lecture, idx) => {
                             const isExpanded = expandedLecture === lecture.id;
-                            const audioFiles = [];
-                            const slidesFiles = [];
-                            const notesFiles = [];
+                            const isLoadingDetail = detailLoading[lecture.id];
+                            const detail = lectureDetails[lecture.id] || null;
+                            // Derive file buckets from lazy-loaded detail
+                            const audioFiles = detail?.audio ? [{
+                                id: detail.audio.id,
+                                name: `${lecture.title} — Audio`,
+                                duration: detail.audio.duration_seconds
+                                    ? `${Math.floor(detail.audio.duration_seconds / 60)}m ${detail.audio.duration_seconds % 60}s`
+                                    : 'Duration unknown',
+                                size: detail.audio.file_size
+                                    ? `${(detail.audio.file_size / 1048576).toFixed(1)} MB`
+                                    : 'Size unknown',
+                            }] : [];
+                            const materials = detail?.materials || [];
+                            const slidesFiles = materials.filter(m => m.m_type === 'PPT').map(m => ({
+                                id: m.id, name: m.file_url ? m.file_url.split('/').pop() : 'Slides', size: '', pages: ''
+                            }));
+                            const notesFiles = materials.filter(m => m.m_type === 'NOTES').map(m => ({
+                                id: m.id, name: m.file_url ? m.file_url.split('/').pop() : 'Notes', size: ''
+                            }));
+                            const hasTranscript = materials.some(m => m.m_type === 'TRANSCRIPT' && m.is_processed_for_rag);
+                            const transcriptMaterial = materials.find(m => m.m_type === 'TRANSCRIPT');
 
                             return (
                                 <Card
@@ -165,7 +200,7 @@ const TeacherSubjectDetail = () => {
                                                     <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center" title="Audio">
                                                         <Headphones className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                                                     </div>
-                                                    {lecture.hasTranscript && (
+                                                    {lecture.has_transcript && (
                                                         <div className="w-6 h-6 rounded-md bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center" title="Transcript">
                                                             <FileText className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                                                         </div>
@@ -181,6 +216,12 @@ const TeacherSubjectDetail = () => {
                                     {/* Expanded Content */}
                                     {isExpanded && (
                                         <div className="border-t border-gray-100 dark:border-gray-800 animate-in slide-in-from-top-2 duration-300">
+                                            {isLoadingDetail ? (
+                                                <div className="p-8 flex items-center justify-center text-sm text-gray-500">
+                                                    <span className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2" />
+                                                    Loading details...
+                                                </div>
+                                            ) : (
                                             <div className="p-5 space-y-5">
 
                                                 {/* Audio Section */}
@@ -272,7 +313,7 @@ const TeacherSubjectDetail = () => {
                                                 </div>
 
                                                 {/* Transcript */}
-                                                {lecture.hasTranscript && (
+                                                {hasTranscript && (
                                                     <div>
                                                         <div className="flex items-center justify-between mb-3">
                                                             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
@@ -296,9 +337,9 @@ const TeacherSubjectDetail = () => {
                                                             }`}>
                                                             <ScrollArea className={activeTranscriptTab === lecture.id ? 'h-[400px]' : 'h-24'}>
                                                                 <div className="p-4 space-y-3">
-                                                                    {lecture.summary ? (
+                                                                    {transcriptMaterial?.content_text ? (
                                                                         <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                                                                            {lecture.summary}
+                                                                            {transcriptMaterial.content_text}
                                                                         </p>
                                                                     ) : (
                                                                         <p className="text-sm text-gray-400">No transcript available for this lecture.</p>
@@ -325,6 +366,7 @@ const TeacherSubjectDetail = () => {
                                                     </Button>
                                                 </div>
                                             </div>
+                                            )}
                                         </div>
                                     )}
                                 </Card>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  Upload as UploadIcon, FileText, File, CheckCircle, ArrowRight, ArrowLeft, X,
-  Headphones, Presentation, StickyNote, FileAudio, Sparkles, AlertCircle
+  Upload as UploadIcon, CheckCircle, ArrowRight, ArrowLeft, X,
+  Headphones, Presentation, FileAudio, Sparkles, AlertCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -33,6 +33,7 @@ const UploadLecture = () => {
     title: '',
     summary: '',
     audioFile: null,
+    slidesFile: null,
     autoTranscript: true,
   });
 
@@ -61,6 +62,13 @@ const UploadLecture = () => {
 
   const removeAudio = () => setFormData(prev => ({ ...prev, audioFile: null }));
 
+  const handleSlidesChange = (e) => {
+    const file = e.target.files[0];
+    if (file) setFormData(prev => ({ ...prev, slidesFile: file }));
+  };
+
+  const removeSlides = () => setFormData(prev => ({ ...prev, slidesFile: null }));
+
   const formatFileSize = (bytes) => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
@@ -79,6 +87,7 @@ const UploadLecture = () => {
       fd.append('title', formData.title);
       if (formData.summary) fd.append('summary', formData.summary);
       if (formData.audioFile) fd.append('audio_file', formData.audioFile);
+      if (formData.slidesFile) fd.append('slides_file', formData.slidesFile);
 
       setUploadProgress(30);
 
@@ -265,6 +274,43 @@ const UploadLecture = () => {
                   </div>
                 </div>
               )}
+
+              {/* Slides Upload */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Presentation className="w-4 h-4 text-purple-500" />
+                  <Label className="text-sm font-semibold">Lecture Slides</Label>
+                  <span className="text-xs text-gray-400">PDF, PPTX, PPT — optional</span>
+                </div>
+                {!formData.slidesFile ? (
+                  <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-8 text-center hover:border-purple-400 dark:hover:border-purple-500 transition-colors cursor-pointer relative group">
+                    <input
+                      type="file"
+                      accept=".pdf,.pptx,.ppt"
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      onChange={handleSlidesChange}
+                    />
+                    <div className="pointer-events-none">
+                      <Presentation className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3 group-hover:text-purple-400 transition-colors duration-300" />
+                      <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                        Drop slides here or <span className="text-purple-600 dark:text-purple-400">browse</span>
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">Max 100MB</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-3 bg-purple-50/50 dark:bg-purple-900/10 rounded-lg border border-purple-100 dark:border-purple-900/20">
+                    <div className="flex items-center gap-2.5">
+                      <Presentation className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[250px]">{formData.slidesFile.name}</span>
+                      <span className="text-xs text-gray-400">{formatFileSize(formData.slidesFile.size)}</span>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={removeSlides} className="h-7 w-7 text-gray-400 hover:text-red-500">
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -308,6 +354,15 @@ const UploadLecture = () => {
                   </div>
                   <Badge variant={formData.audioFile ? 'default' : 'secondary'} className="text-xs">
                     {formData.audioFile ? formData.audioFile.name : 'None'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <Presentation className="w-4 h-4 text-purple-500" />
+                    <span className="text-gray-600 dark:text-gray-400">Slides</span>
+                  </div>
+                  <Badge variant={formData.slidesFile ? 'default' : 'secondary'} className="text-xs">
+                    {formData.slidesFile ? formData.slidesFile.name : 'None'}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between text-sm">

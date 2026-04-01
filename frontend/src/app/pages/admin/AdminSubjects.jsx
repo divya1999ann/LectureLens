@@ -1,27 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, BookOpen, AlertCircle, RefreshCw, Presentation } from 'lucide-react';
+import { ArrowLeft, BookOpen, AlertCircle, RefreshCw, Presentation, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
-import { coursesAPI, getErrorMessage } from '../../services/api';
+import { coursesAPI, usersAPI, getErrorMessage } from '../../services/api';
 
 const AddSubjectModal = ({ open, onOpenChange, onAdded }) => {
-    const [formData, setFormData] = useState({ title: '', description: '' });
+    const [formData, setFormData] = useState({ title: '', description: '', teacher: '' });
+    const [teachers, setTeachers] = useState([]);
+    const [teachersLoading, setTeachersLoading] = useState(true);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    // Load teachers when modal opens
+    React.useEffect(() => {
+        if (!open) return;
+        setTeachersLoading(true);
+        usersAPI.list('TEACHER')
+            .then(r => setTeachers(r.data.results ?? r.data))
+            .catch(() => {})
+            .finally(() => setTeachersLoading(false));
+    }, [open]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!formData.teacher) {
+            setError('Please select a teacher for this subject.');
+            return;
+        }
         setLoading(true);
         setError('');
         try {
-            await coursesAPI.create(formData);
-            setFormData({ title: '', description: '' });
+            await coursesAPI.create({ title: formData.title, description: formData.description, teacher: formData.teacher });
+            setFormData({ title: '', description: '', teacher: '' });
             onOpenChange(false);
             onAdded();
         } catch (err) {
@@ -44,6 +59,21 @@ const AddSubjectModal = ({ open, onOpenChange, onAdded }) => {
                         <Input placeholder="e.g. Introduction to Machine Learning" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
                     </div>
                     <div className="space-y-2">
+                        <Label>Assign Teacher</Label>
+                        <select
+                            className="w-full h-10 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-900 dark:text-white"
+                            value={formData.teacher}
+                            onChange={(e) => setFormData({ ...formData, teacher: e.target.value })}
+                            disabled={teachersLoading}
+                            required
+                        >
+                            <option value="">{teachersLoading ? 'Loading teachers...' : 'Select a teacher...'}</option>
+                            {teachers.map(t => (
+                                <option key={t.id} value={t.id}>{t.full_name || t.email}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="space-y-2">
                         <Label>Description</Label>
                         <Textarea placeholder="Brief description of the course..." value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} />
                     </div>
@@ -63,6 +93,20 @@ const AdminSubjects = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [addOpen, setAddOpen] = useState(false);
+    const [deleting, setDeleting] = useState(null);
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('Delete this subject? All its lectures will also be deleted. This cannot be undone.')) return;
+        setDeleting(id);
+        try {
+            await coursesAPI.delete(id);
+            setSubjects(prev => prev.filter(s => s.id !== id));
+        } catch (err) {
+            setError(getErrorMessage(err));
+        } finally {
+            setDeleting(null);
+        }
+    };
 
     const fetchSubjects = async () => {
         setLoading(true);
@@ -139,6 +183,16 @@ const AdminSubjects = () => {
                                 <p className="text-xs text-gray-400 shrink-0">
                                     {new Date(subject.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                 </p>
+
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-gray-400 hover:text-red-600 shrink-0"
+                                    disabled={deleting === subject.id}
+                                    onClick={() => handleDelete(subject.id)}
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
                             </CardContent>
                         </Card>
                     ))}

@@ -4,37 +4,7 @@ const useChatStore = create((set) => ({
   selectedLectures: [],
   currentChatId: null,
   messages: [],
-  chatHistory: [
-    {
-      id: '1',
-      subjectId: 1,
-      firstMessage: 'Can you summarize lecture 1?',
-      lectureCount: 2,
-      messageCount: 8,
-      timestamp: '2024-02-08T14:30:00',
-      messages: [
-        { id: 1, role: 'user', content: 'Can you summarize lecture 1?', timestamp: '2024-02-08T14:30:00' },
-        {
-          id: 2,
-          role: 'assistant',
-          content: 'Based on Lecture 1: Introduction to ML Systems, here\'s a comprehensive summary of the main concepts:\n\n1. **ML Systems Overview**: Machine Learning systems combine traditional software engineering with ML models to create production-ready applications.\n\n2. **Key Components**: Data pipelines, model training infrastructure, serving layer, and monitoring systems.\n\n3. **Challenges**: Scalability, data quality, model drift, and integration complexity.',
-          timestamp: '2024-02-08T14:30:05',
-          citations: [
-            { id: 1, lecture: 'Lecture 1: Introduction', excerpt: 'ML systems combine traditional software engineering principles with machine learning models...', timestamp: '00:15:32' }
-          ]
-        }
-      ]
-    },
-    {
-      id: '2',
-      subjectId: 1,
-      firstMessage: 'Explain the data pipeline architecture',
-      lectureCount: 1,
-      messageCount: 5,
-      timestamp: '2024-02-07T10:15:00',
-      messages: []
-    }
-  ],
+  chatHistory: [],
 
   setSelectedLectures: (lectures) => set({ selectedLectures: lectures }),
 

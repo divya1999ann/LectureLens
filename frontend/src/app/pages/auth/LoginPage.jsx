@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router';
+import { useNavigate, useLocation, Link, Navigate } from 'react-router';
 import { Eye, EyeOff, GraduationCap } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -7,6 +7,12 @@ import { Label } from '../../components/ui/label';
 import { Checkbox } from '../../components/ui/checkbox';
 import useAuthStore from '../../store/authStore';
 import { authAPI, getErrorMessage } from '../../services/api';
+
+const roleDashboard = (role) => {
+  if (role === 'admin') return '/admin/dashboard';
+  if (role === 'teacher') return '/teacher/dashboard';
+  return '/dashboard';
+};
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -16,7 +22,14 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
+  const location = useLocation();
+  const { login, isAuthenticated, user } = useAuthStore();
+
+  // Already logged in — send back to where they came from or their dashboard
+  if (isAuthenticated) {
+    const destination = location.state?.from?.pathname || roleDashboard(user?.role);
+    return <Navigate to={destination} replace />;
+  }
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -29,15 +42,10 @@ const LoginPage = () => {
       // data = { access, refresh, user: { id, email, role, is_active, created_at } }
       login(data.user, data.access, data.refresh);
 
-      // Redirect based on normalized role (authStore lowercases it)
+      // Redirect to the page they were trying to reach, or role dashboard
       const role = data.user.role?.toLowerCase();
-      if (role === 'admin') {
-        navigate('/admin/dashboard');
-      } else if (role === 'teacher') {
-        navigate('/teacher/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+      const destination = location.state?.from?.pathname || roleDashboard(role);
+      navigate(destination, { replace: true });
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -116,12 +124,9 @@ const LoginPage = () => {
                   Remember me
                 </Label>
               </div>
-              <Link
-                to="/forgot-password"
-                className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-              >
+              <span className="text-sm text-gray-400 dark:text-gray-600 cursor-not-allowed" title="Coming soon">
                 Forgot password?
-              </Link>
+              </span>
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>

@@ -212,12 +212,14 @@ const LectureList = () => {
                                     <div className="flex flex-wrap gap-2">
                                         <div className="flex items-center text-xs font-medium bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full text-gray-600 dark:text-gray-300">
                                             <FileAudio className="w-3 h-3 mr-1.5" />
-                                            {lecture.audio ? '1 Audio' : 'No Audio'}
+                                            {(lecture.material_count ?? 0) > 0 ? 'Has Materials' : 'No Materials'}
                                         </div>
+                                        {lecture.has_transcript && (
                                         <div className="flex items-center text-xs font-medium bg-purple-50 dark:bg-purple-900/20 px-2.5 py-1 rounded-full text-purple-700 dark:text-purple-400">
                                             <FileText className="w-3 h-3 mr-1.5" />
-                                            {lecture.material_count ?? 0} materials
+                                            Transcript Ready
                                         </div>
+                                        )}
                                     </div>
                                 </div>
 
