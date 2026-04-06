@@ -136,6 +136,17 @@ export const coursesAPI = {
 
     /** DELETE /api/courses/{id}/ */
     delete: (id) => api.delete(`/courses/${id}/`),
+
+    /** GET /api/courses/{id}/students/ — admin only */
+    getStudents: (id) => api.get(`/courses/${id}/students/`),
+
+    /** POST /api/courses/{id}/students/ — assign students, body: { student_ids: [uuid] } */
+    assignStudents: (id, studentIds) =>
+        api.post(`/courses/${id}/students/`, { student_ids: studentIds }),
+
+    /** DELETE /api/courses/{id}/students/{studentId}/ — remove student */
+    removeStudent: (courseId, studentId) =>
+        api.delete(`/courses/${courseId}/students/${studentId}/`),
 };
 
 // ─── Lectures ─────────────────────────────────────────────────────────────────

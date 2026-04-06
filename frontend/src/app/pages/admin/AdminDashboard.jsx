@@ -132,7 +132,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Quick Overview Sections */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {/* Teachers — real API data */}
         <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
           <div className="flex items-center justify-between p-5 pb-3 border-b border-gray-100 dark:border-gray-800">
@@ -143,7 +143,7 @@ const AdminDashboard = () => {
           </div>
           <CardContent className="p-0">
             {loading ? (
-              [1, 2, 3].map(i => (
+              [1, 2].map(i => (
                 <div key={i} className="flex items-center gap-3 px-5 py-3 border-b border-gray-50 dark:border-gray-800/50 last:border-b-0">
                   <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
                   <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
@@ -152,7 +152,7 @@ const AdminDashboard = () => {
             ) : teachers.length === 0 ? (
               <div className="px-5 py-6 text-center text-sm text-gray-400">No teachers yet.</div>
             ) : (
-              teachers.slice(0, 4).map(teacher => (
+              teachers.slice(0, 2).map(teacher => (
                 <div
                   key={teacher.id}
                   className="flex items-center gap-3 px-5 py-3 border-b border-gray-50 dark:border-gray-800/50 last:border-b-0 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer"
@@ -165,6 +165,47 @@ const AdminDashboard = () => {
                     <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{teacher.full_name || '—'}</p>
                     <p className="text-xs text-gray-400 truncate">{teacher.email}</p>
                   </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Students — real API data */}
+        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+          <div className="flex items-center justify-between p-5 pb-3 border-b border-gray-100 dark:border-gray-800">
+            <h2 className="font-semibold text-gray-900 dark:text-white text-sm">Students</h2>
+            <Button variant="ghost" size="sm" className="text-xs text-blue-600 hover:text-blue-700 h-7 px-2 gap-1" onClick={() => navigate('/admin/students')}>
+              View all <ArrowRight className="w-3 h-3" />
+            </Button>
+          </div>
+          <CardContent className="p-0">
+            {loading ? (
+              [1, 2].map(i => (
+                <div key={i} className="flex items-center gap-3 px-5 py-3 border-b border-gray-50 dark:border-gray-800/50 last:border-b-0">
+                  <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+                  <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                </div>
+              ))
+            ) : students.length === 0 ? (
+              <div className="px-5 py-6 text-center text-sm text-gray-400">No students yet.</div>
+            ) : (
+              students.slice(0, 2).map(student => (
+                <div
+                  key={student.id}
+                  className="flex items-center gap-3 px-5 py-3 border-b border-gray-50 dark:border-gray-800/50 last:border-b-0 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer"
+                  onClick={() => navigate('/admin/students')}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white font-bold text-xs shrink-0">
+                    {(student.full_name || student.email).charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{student.full_name || '—'}</p>
+                    <p className="text-xs text-gray-400 truncate">{student.email}</p>
+                  </div>
+                  <Badge className="text-[10px] border-none font-semibold px-2 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 shrink-0">
+                    {student.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
                 </div>
               ))
             )}
@@ -190,7 +231,7 @@ const AdminDashboard = () => {
             ) : courses.length === 0 ? (
               <div className="px-5 py-6 text-center text-sm text-gray-400">No subjects yet.</div>
             ) : (
-              courses.slice(0, 4).map(subject => (
+              courses.slice(0, 2).map(subject => (
                 <div
                   key={subject.id}
                   className="flex items-center gap-3 px-5 py-3 border-b border-gray-50 dark:border-gray-800/50 last:border-b-0 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer"

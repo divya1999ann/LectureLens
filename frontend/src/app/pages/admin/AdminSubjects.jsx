@@ -35,7 +35,7 @@ const AddSubjectModal = ({ open, onOpenChange, onAdded }) => {
         setLoading(true);
         setError('');
         try {
-            await coursesAPI.create({ title: formData.title, description: formData.description, teacher: formData.teacher });
+            await coursesAPI.create({ title: formData.title, description: formData.description, teacher_id: formData.teacher });
             setFormData({ title: '', description: '', teacher: '' });
             onOpenChange(false);
             onAdded();

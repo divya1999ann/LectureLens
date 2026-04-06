@@ -24,8 +24,17 @@ class IsAdminUser(permissions.BasePermission):
 
 class IsTeacherOrReadOnly(permissions.BasePermission):
     """Only teachers can create/update/delete, others can read"""
-    
+
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return request.user.is_authenticated
         return request.user.is_authenticated and request.user.role == 'TEACHER'
+
+
+class IsTeacherOrAdmin(permissions.BasePermission):
+    """Teachers and admins can write; others can only read"""
+
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return request.user.is_authenticated
+        return request.user.is_authenticated and request.user.role in ('TEACHER', 'ADMIN')
