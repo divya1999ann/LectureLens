@@ -99,7 +99,7 @@ const RegisterPage = () => {
               Create Account
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              Join LectureLens today
+              Join LectureChat today
             </p>
           </div>
 

@@ -1,5 +1,5 @@
 /**
- * Central API service for LectureLens
+ * Central API service for LectureChat
  * Handles all communication with the Django REST backend at http://127.0.0.1:8000
  */
 import axios from 'axios';
